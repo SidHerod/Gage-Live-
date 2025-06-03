@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { UserProfile, OtherUser, GuessRecord, EnrichedUserProfile, SetProfilePayload } from '../types';
+import type {
+  UserProfile,
+  OtherUser,
+  GuessRecord,
+  EnrichedUserProfile,
+  SetProfilePayload,
+} from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const PROFILE_STORAGE_PREFIX = 'gageUserProfile_firebase_uid_v1_';
@@ -61,18 +67,12 @@ async function convertUrlToBase64(url: string): Promise<string | null> {
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error("Error converting image to base64:", error);
+    console.error('Error converting image to base64:', error);
     return null;
   }
 }
 
-export function useProfileHook(): {
-  profile: EnrichedUserProfile | null;
-  setProfileData: (data: SetProfilePayload) => Promise<void>;
-  updateUserGuessingStats: (pointsEarned: number, guessedUser: OtherUser, userGuess: number) => void;
-  clearProfile: () => void;
-  isLoading: boolean;
-} {
+export function useProfileHook() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const [profileState, setProfileState] = useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
@@ -90,12 +90,10 @@ export function useProfileHook(): {
         try {
           const localKey = PROFILE_STORAGE_PREFIX + currentUser.uid;
           const storedProfile = localStorage.getItem(localKey);
-
           let parsedProfile: UserProfile | null = storedProfile
             ? JSON.parse(storedProfile)
             : null;
 
-          // If no local profile, create a new one
           if (!parsedProfile) {
             let googlePhotoBase64: string | null = null;
             let photoIsFromGoogle = false;
@@ -120,28 +118,33 @@ export function useProfileHook(): {
             };
           }
 
-          // Update Firestore-derived stats
           try {
             const docRef = doc(db, 'users', currentUser.uid);
             const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
+            if (!docSnap.exists()) {
+              await setDoc(docRef, {
+                communityAverageGuessTotal: 0,
+                numberOfCommunityGuesses: 0,
+                createdAt: new Date(),
+              });
+              parsedProfile.communityAverageGuess = null;
+              parsedProfile.numberOfCommunityGuesses = 0;
+            } else {
               const firestoreData = docSnap.data();
-             const total = firestoreData.communityAverageGuessTotal ?? 0;
-const count = firestoreData.numberOfCommunityGuesses ?? 0;
-parsedProfile.communityAverageGuess = count > 0
-  ? total / count
-  : null;
-parsedProfile.numberOfCommunityGuesses = count;
+              const total = firestoreData.communityAverageGuessTotal ?? 0;
+              const count = firestoreData.numberOfCommunityGuesses ?? 0;
+              parsedProfile.communityAverageGuess = count > 0 ? total / count : null;
+              parsedProfile.numberOfCommunityGuesses = count;
             }
           } catch (error) {
-            console.warn('Failed to load Firestore stats:', error);
+            console.warn('Failed to load or create Firestore user document:', error);
           }
 
           setProfileState(parsedProfile);
           localStorage.setItem(localKey, JSON.stringify(parsedProfile));
           localStorage.setItem(ACTIVE_GAGE_USER_ID_KEY, currentUser.uid);
         } catch (error) {
-          console.error("Failed to load or create profile:", error);
+          console.error('Failed to load or create profile:', error);
           setProfileState(null);
         }
       } else {
@@ -168,38 +171,44 @@ parsedProfile.numberOfCommunityGuesses = count;
     }
   }, [profileState, isProfileLoading, isAuthLoading]);
 
-  const setProfileData = useCallback(async (data: SetProfilePayload) => {
-    setProfileState(prev => {
-      if (!prev || !currentUser || prev.id !== currentUser.uid) return prev;
-      return {
-        ...prev,
-        ...data,
-        hasProvidedDob: data.dob !== undefined ? !!data.dob : prev.hasProvidedDob,
-        photoFromGoogle:
-          data.photoFromGoogle !== undefined ? data.photoFromGoogle : prev.photoFromGoogle,
-      };
-    });
-  }, [currentUser]);
+  const setProfileData = useCallback(
+    async (data: SetProfilePayload) => {
+      setProfileState(prev => {
+        if (!prev || !currentUser || prev.id !== currentUser.uid) return prev;
+        return {
+          ...prev,
+          ...data,
+          hasProvidedDob: data.dob !== undefined ? !!data.dob : prev.hasProvidedDob,
+          photoFromGoogle:
+            data.photoFromGoogle !== undefined ? data.photoFromGoogle : prev.photoFromGoogle,
+        };
+      });
+    },
+    [currentUser]
+  );
 
-  const updateUserGuessingStats = useCallback((pointsEarned: number, guessedUser: OtherUser, userGuess: number) => {
-    setProfileState(prev => {
-      if (!prev) return null;
-      const newGuessRecord: GuessRecord = {
-        guessedUserId: guessedUser.id,
-        guessedUserName: guessedUser.name,
-        guessedUserPhotoBase64: guessedUser.photoBase64,
-        theirActualAge: guessedUser.actualAge,
-        yourGuess: userGuess,
-        pointsEarned,
-      };
-      return {
-        ...prev,
-        myTotalGuessingPoints: prev.myTotalGuessingPoints + pointsEarned,
-        myNumberOfGuessesMade: prev.myNumberOfGuessesMade + 1,
-        lastThreeGuesses: [newGuessRecord, ...prev.lastThreeGuesses].slice(0, 3),
-      };
-    });
-  }, []);
+  const updateUserGuessingStats = useCallback(
+    (pointsEarned: number, guessedUser: OtherUser, userGuess: number) => {
+      setProfileState(prev => {
+        if (!prev) return null;
+        const newGuessRecord: GuessRecord = {
+          guessedUserId: guessedUser.id,
+          guessedUserName: guessedUser.name,
+          guessedUserPhotoBase64: guessedUser.photoBase64,
+          theirActualAge: guessedUser.actualAge,
+          yourGuess: userGuess,
+          pointsEarned,
+        };
+        return {
+          ...prev,
+          myTotalGuessingPoints: prev.myTotalGuessingPoints + pointsEarned,
+          myNumberOfGuessesMade: prev.myNumberOfGuessesMade + 1,
+          lastThreeGuesses: [newGuessRecord, ...prev.lastThreeGuesses].slice(0, 3),
+        };
+      });
+    },
+    []
+  );
 
   const clearProfile = useCallback(() => {
     setProfileState(null);
