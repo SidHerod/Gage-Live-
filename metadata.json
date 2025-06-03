@@ -1,0 +1,8 @@
+{
+  "name": "Gage - Community Age Guesser",
+  "description": "A fun web application where you guess the age of others and see how well the community guesses yours! Set up your profile and test your age-guessing skills.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "prompt": ""
+}
