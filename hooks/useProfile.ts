@@ -7,12 +7,13 @@ import type {
   SetProfilePayload,
 } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const PROFILE_STORAGE_PREFIX = 'gageUserProfile_firebase_uid_v1_';
 const ACTIVE_GAGE_USER_ID_KEY = 'activeGageUserFirebaseUid_v1';
 
+// Calculate age from date-of-birth string
 export function calculateAge(dobString: string): number {
   if (!dobString) return 0;
   const dob = new Date(dobString);
@@ -25,6 +26,7 @@ export function calculateAge(dobString: string): number {
   return age;
 }
 
+// Get all profiles except the current user from localStorage
 export function getAvailableProfilesForGuessing(currentUserId: string): OtherUser[] {
   const profiles: OtherUser[] = [];
   if (typeof window === 'undefined' || !window.localStorage) return profiles;
@@ -55,6 +57,7 @@ export function getAvailableProfilesForGuessing(currentUserId: string): OtherUse
   return profiles;
 }
 
+// Convert an image URL to a Base64 data URL
 async function convertUrlToBase64(url: string): Promise<string | null> {
   try {
     const response = await fetch(url);
@@ -72,11 +75,13 @@ async function convertUrlToBase64(url: string): Promise<string | null> {
   }
 }
 
+// Main profile hook
 export function useProfileHook() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const [profileState, setProfileState] = useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
+  // Load user profile from localStorage and Firestore
   useEffect(() => {
     if (isAuthLoading) {
       setIsProfileLoading(true);
@@ -94,6 +99,7 @@ export function useProfileHook() {
             ? JSON.parse(storedProfile)
             : null;
 
+          // If not in local storage, create a new profile
           if (!parsedProfile) {
             let googlePhotoBase64: string | null = null;
             let photoIsFromGoogle = false;
@@ -101,7 +107,6 @@ export function useProfileHook() {
               googlePhotoBase64 = await convertUrlToBase64(currentUser.photoURL);
               if (googlePhotoBase64) photoIsFromGoogle = true;
             }
-
             parsedProfile = {
               id: currentUser.uid,
               email: currentUser.email || '',
@@ -118,6 +123,7 @@ export function useProfileHook() {
             };
           }
 
+          // Fetch guess stats from Firestore
           try {
             const docRef = doc(db, 'users', currentUser.uid);
             const docSnap = await getDoc(docRef);
@@ -158,6 +164,7 @@ export function useProfileHook() {
     loadProfile();
   }, [currentUser, isAuthLoading]);
 
+  // Persist profile to localStorage when changed
   useEffect(() => {
     if (isProfileLoading || isAuthLoading) return;
     if (profileState && profileState.id) {
@@ -171,6 +178,7 @@ export function useProfileHook() {
     }
   }, [profileState, isProfileLoading, isAuthLoading]);
 
+  // Set/update profile data in memory
   const setProfileData = useCallback(
     async (data: SetProfilePayload) => {
       setProfileState(prev => {
@@ -187,6 +195,7 @@ export function useProfileHook() {
     [currentUser]
   );
 
+  // Update guessing stats for the current user (local only)
   const updateUserGuessingStats = useCallback(
     (pointsEarned: number, guessedUser: OtherUser, userGuess: number) => {
       setProfileState(prev => {
@@ -210,10 +219,40 @@ export function useProfileHook() {
     []
   );
 
+  // Update guessing stats for a community user (Firestore logic)
+  const addCommunityGuess = useCallback(
+    async (targetUserId: string, guessedAge: number) => {
+      try {
+        const docRef = doc(db, 'users', targetUserId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const prevTotal = typeof data.communityAverageGuessTotal === 'number' ? data.communityAverageGuessTotal : 0;
+          const prevCount = typeof data.numberOfCommunityGuesses === 'number' ? data.numberOfCommunityGuesses : 0;
+          await updateDoc(docRef, {
+            communityAverageGuessTotal: prevTotal + guessedAge,
+            numberOfCommunityGuesses: prevCount + 1,
+          });
+        } else {
+          await setDoc(docRef, {
+            communityAverageGuessTotal: guessedAge,
+            numberOfCommunityGuesses: 1,
+            createdAt: new Date(),
+          });
+        }
+      } catch (error) {
+        console.error('Error updating community guess stats in Firestore:', error);
+      }
+    },
+    []
+  );
+
+  // Clear profile
   const clearProfile = useCallback(() => {
     setProfileState(null);
   }, []);
 
+  // Enrich profile (computed fields)
   const enrichedProfile = useMemo((): EnrichedUserProfile | null => {
     if (!profileState) return null;
     const isComplete = !!profileState.dob && !!profileState.photoBase64;
@@ -228,6 +267,7 @@ export function useProfileHook() {
     profile: enrichedProfile,
     setProfileData,
     updateUserGuessingStats,
+    addCommunityGuess, // <-- for updating guesses in firestore
     clearProfile,
     isLoading: isProfileLoading,
   };
