@@ -35,6 +35,7 @@ const getGuessAccuracyVisual = (record: GuessRecord) => {
     title = `Off by ${diff} years`;
     icon = <XCircleIcon className="w-5 h-5 text-red-500 ml-2" />;
   }
+
   return <span title={title} className="flex items-center">{icon} <span className="sr-only">{title}</span></span>;
 };
 
@@ -48,7 +49,7 @@ const StatisticsScreen: React.FC = () => {
     }
   }, [isProfileLoading, profile, navigate]);
 
-  if (isProfileLoading) {
+  if (isProfileLoading || !profile) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-300px)]">
         <LoadingSpinner size="lg" />
@@ -56,27 +57,27 @@ const StatisticsScreen: React.FC = () => {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-300px)]">
-        <LoadingSpinner size="lg" />
-        <p className="ml-4 text-slate-700">Redirecting to login...</p>
-      </div>
-    );
-  }
+  // ✅ Debug: Check if GAGE data is loaded correctly
+  console.log('📊 GAGE Stats', {
+    communityAverageGuess: profile.communityAverageGuess,
+    numberOfCommunityGuesses: profile.numberOfCommunityGuesses,
+  });
 
   const calculateGagerScore = (): string => {
     if (profile.myNumberOfGuessesMade === 0) return 'N/A';
-    const maxPossiblePoints = profile.myNumberOfGuessesMade * 10;
-    if (maxPossiblePoints === 0) return '0%';
-    const accuracy = (profile.myTotalGuessingPoints / maxPossiblePoints) * 100;
+    const maxPoints = profile.myNumberOfGuessesMade * 10;
+    const accuracy = (profile.myTotalGuessingPoints / maxPoints) * 100;
     return `${Math.round(accuracy)}%`;
   };
 
+  // ✅ Fix logic to handle GAGE properly
+  const yourGage =
+    typeof profile.communityAverageGuess === 'number' &&
+    profile.numberOfCommunityGuesses > 0
+      ? Math.round(profile.communityAverageGuess)
+      : 'N/A';
+
   const gagerScore = calculateGagerScore();
-  const yourGage = profile.numberOfCommunityGuesses > 0 && profile.communityAverageGuess !== null
-    ? Math.round(profile.communityAverageGuess)
-    : 'N/A';
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -99,17 +100,11 @@ const StatisticsScreen: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StatCard 
-          title="Your GAGE" 
-          value={yourGage}
-        >
+        <StatCard title="Your GAGE" value={yourGage}>
           <p>Avg. age others guess for you.</p>
           <p>Based on {profile.numberOfCommunityGuesses} community guess{profile.numberOfCommunityGuesses === 1 ? '' : 'es'}.</p>
         </StatCard>
-        <StatCard 
-          title="GAGER Score" 
-          value={gagerScore}
-        >
+        <StatCard title="GAGER Score" value={gagerScore}>
           <p>Your accuracy in guessing others' ages.</p>
           <p>Based on {profile.myNumberOfGuessesMade} guess{profile.myNumberOfGuessesMade === 1 ? '' : 'es'} you've made.</p>
         </StatCard>
@@ -176,4 +171,3 @@ const StatisticsScreen: React.FC = () => {
 };
 
 export default StatisticsScreen;
-
