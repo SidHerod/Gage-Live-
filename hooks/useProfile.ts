@@ -126,12 +126,12 @@ export function useProfileHook(): {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
               const firestoreData = docSnap.data();
-              const total = firestoreData.communityAverageGuessTotal;
-              const count = firestoreData.numberOfCommunityGuesses;
-              parsedProfile.communityAverageGuess = total && count
-                ? Math.round(total / count)
-                : null;
-              parsedProfile.numberOfCommunityGuesses = count || 0;
+             const total = firestoreData.communityAverageGuessTotal ?? 0;
+const count = firestoreData.numberOfCommunityGuesses ?? 0;
+parsedProfile.communityAverageGuess = count > 0
+  ? total / count
+  : null;
+parsedProfile.numberOfCommunityGuesses = count;
             }
           } catch (error) {
             console.warn('Failed to load Firestore stats:', error);
