@@ -6,7 +6,6 @@ import { getAvailableProfilesForGuessing } from '../hooks/useProfile';
 import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import type { OtherUser } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { GageLogoIcon } from './icons';
 
 interface AnimatedFeedback {
   text: string;
@@ -103,7 +102,7 @@ const AgeGuessingScreen: React.FC = () => {
       await updateDoc(userDocRef, {
         communityAverageGuessTotal: increment(guess),
         numberOfCommunityGuesses: increment(1),
-        guessHistory: arrayUnion({ guesserId: profile.id, guessValue: guess })
+        guessHistory: arrayUnion({ guesserId: profile.id, guessValue: guess }),
       });
     } catch (error) {
       console.error("Error updating Firestore for guess:", error);
@@ -134,8 +133,8 @@ const AgeGuessingScreen: React.FC = () => {
     submitGuessAndLoadNext();
   };
 
-  if (isProfileLoading) return <LoadingSpinner size="lg" />;
-  if (!profile) return <LoadingSpinner size="lg" />;
+  if (isProfileLoading || !profile) return <LoadingSpinner size="lg" />;
+
   if (noProfilesMessage && gagedAnimationStep === 'idle') {
     return (
       <div className="text-center p-8 bg-white rounded-xl shadow-xl max-w-md mx-auto">
@@ -152,29 +151,32 @@ const AgeGuessingScreen: React.FC = () => {
   }
 
   return (
-  <div className="text-center p-10">
-    <h1 className="text-3xl font-bold mb-4">Guess Their Age</h1>
-    {currentUserToGuess && (
-      <img
-        src={currentUserToGuess.photoBase64}
-        alt="User to guess"
-        className="w-48 h-48 object-cover rounded-full mx-auto mb-4"
+    <div className="text-center p-10">
+      <h1 className="text-3xl font-bold mb-4">Guess Their Age</h1>
+      {currentUserToGuess && (
+        <img
+          src={currentUserToGuess.photoBase64}
+          alt="User to guess"
+          className="w-48 h-48 object-cover rounded-full mx-auto mb-4"
+        />
+      )}
+      <p className="text-lg mb-2">Your Guess: {currentGuessValue}</p>
+      <input
+        type="range"
+        min="10"
+        max="100"
+        value={currentGuessValue}
+        onChange={handleSliderChange}
+        onMouseUp={handleSliderRelease}
+        className="w-full"
       />
-    )}
-    <p className="text-lg mb-2">Your Guess: {currentGuessValue}</p>
-    <input
-      type="range"
-      min="10"
-      max="100"
-      value={currentGuessValue}
-      onChange={handleSliderChange}
-      onMouseUp={handleSliderRelease}
-      className="w-full"
-    />
-    {animatedFeedback && (
-      <p className={`mt-4 text-2xl font-bold ${animatedFeedback.colorClass}`}>
-        {animatedFeedback.text}
-      </p>
-    )}
-  </div>
-);
+      {animatedFeedback && (
+        <p className={`mt-4 text-2xl font-bold ${animatedFeedback.colorClass}`}>
+          {animatedFeedback.text}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default AgeGuessingScreen;
