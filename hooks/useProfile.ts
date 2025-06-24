@@ -21,6 +21,11 @@ export function calculateAge(dobString: string): number {
 
 async function convertUrlToBase64(url: string): Promise<string | null> {
   try {
+    // 🔧 Force higher-res image from Google if applicable
+    if (url.includes('googleusercontent')) {
+      url = url.replace(/s\d+-c/, 's400-c');
+    }
+
     const response = await fetch(url);
     if (!response.ok) return null;
     const blob = await response.blob();
