@@ -172,4 +172,26 @@ const AgeGuessingScreen: React.FC = () => {
         <img
           src={currentUserToGuess.photoBase64}
           alt="User to guess"
-          className="w-48 h-48 object-cover rounded-full mx-auto m
+          className="w-48 h-48 object-cover rounded-full mx-auto mb-4"
+        />
+      )}
+      <p className="text-lg mb-2">Your Guess: {currentGuessValue}</p>
+      <input
+        type="range"
+        min="10"
+        max="100"
+        value={currentGuessValue}
+        onChange={handleSliderChange}
+        onMouseUp={handleSliderRelease}
+        className="w-full"
+      />
+      {animatedFeedback && (
+        <p className={`mt-4 text-2xl font-bold ${animatedFeedback.colorClass}`}>
+          {animatedFeedback.text}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default AgeGuessingScreen;
