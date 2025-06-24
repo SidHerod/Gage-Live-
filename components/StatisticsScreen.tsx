@@ -120,10 +120,10 @@ const StatisticsScreen: React.FC = () => {
                 className="flex flex-col sm:flex-row items-center bg-gray-50 p-4 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow duration-300"
               >
                 <img 
-                  src={record.guessedUserPhotoBase64} 
-                  alt={record.guessedUserName || 'Guessed user'} 
-                  className="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-md mr-0 sm:mr-4 mb-3 sm:mb-0 border border-gray-100" 
-                />
+  src={profile.photoBase64} 
+  alt="Your profile" 
+  className="w-32 sm:w-40 h-48 sm:h-56 object-cover rounded-xl border shadow-xl"
+/>
                 <div className="flex-grow text-center sm:text-left">
                   <p className="font-semibold text-gray-800 text-lg">{record.guessedUserName || 'A User'}</p>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-sm mt-1">
