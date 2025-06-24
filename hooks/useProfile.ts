@@ -7,7 +7,7 @@ import type {
   SetProfilePayload,
 } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const PROFILE_STORAGE_PREFIX = 'gageUserProfile_firebase_uid_v1_';
@@ -84,6 +84,8 @@ export function useProfileHook() {
       return;
     }
 
+    let unsubscribe: (() => void) | null = null;
+
     const loadProfile = async () => {
       setIsProfileLoading(true);
 
@@ -118,25 +120,27 @@ export function useProfileHook() {
             };
           }
 
-          try {
-            const docRef = doc(db, 'users', currentUser.uid);
-            const docSnap = await getDoc(docRef);
+          const docRef = doc(db, 'users', currentUser.uid);
 
-            if (!docSnap.exists()) {
-              await setDoc(docRef, {
-                communityAverageGuessTotal: 0,
-                numberOfCommunityGuesses: 0,
-                createdAt: new Date(),
-              });
-            } else {
-              const firestoreData = docSnap.data();
-              const total = firestoreData.communityAverageGuessTotal ?? 0;
-              const count = firestoreData.numberOfCommunityGuesses ?? 0;
-              parsedProfile.communityAverageGuess = count > 0 ? total / count : null;
-              parsedProfile.numberOfCommunityGuesses = count;
-            }
-          } catch (error) {
-            console.warn('Firestore load/create error:', error);
+          unsubscribe = onSnapshot(docRef, (docSnap) => {
+            if (!docSnap.exists()) return;
+            const firestoreData = docSnap.data();
+            const total = firestoreData.communityAverageGuessTotal ?? 0;
+            const count = firestoreData.numberOfCommunityGuesses ?? 0;
+            setProfileState(prev => prev && ({
+              ...prev,
+              communityAverageGuess: count > 0 ? total / count : null,
+              numberOfCommunityGuesses: count,
+            }));
+          });
+
+          const docSnap = await getDoc(docRef);
+          if (!docSnap.exists()) {
+            await setDoc(docRef, {
+              communityAverageGuessTotal: 0,
+              numberOfCommunityGuesses: 0,
+              createdAt: new Date(),
+            });
           }
 
           setProfileState(parsedProfile);
@@ -155,6 +159,10 @@ export function useProfileHook() {
     };
 
     loadProfile();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [currentUser, isAuthLoading]);
 
   useEffect(() => {
