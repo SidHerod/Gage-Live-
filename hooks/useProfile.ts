@@ -34,15 +34,14 @@ export function useProfileHook() {
       setIsProfileLoading(true);
 
       if (currentUser && currentUser.uid) {
+        const localKey = PROFILE_STORAGE_PREFIX + currentUser.uid;
+        const docRef = doc(db, 'users', currentUser.uid);
+
         try {
-          const localKey = PROFILE_STORAGE_PREFIX + currentUser.uid;
-          const storedProfile = localStorage.getItem(localKey);
-          let parsedProfile: UserProfile | null = null; // ← skip using stale localStorage
-          const docRef = doc(db, 'users', currentUser.uid);
           const docSnap = await getDoc(docRef);
           const firestoreData = docSnap.exists() ? docSnap.data() : {};
 
-          parsedProfile = {
+          const finalProfile: UserProfile = {
             id: currentUser.uid,
             email: currentUser.email || '',
             name: firestoreData.name || currentUser.displayName || 'Gage User',
@@ -59,24 +58,27 @@ export function useProfileHook() {
 
           const total = firestoreData.communityAverageGuessTotal ?? 0;
           const count = firestoreData.numberOfCommunityGuesses ?? 0;
-          parsedProfile.communityAverageGuess = count > 0 ? total / count : null;
-          parsedProfile.numberOfCommunityGuesses = count;
+          finalProfile.communityAverageGuess = count > 0 ? total / count : null;
+          finalProfile.numberOfCommunityGuesses = count;
 
-          await setDoc(docRef, {
-            communityAverageGuessTotal: firestoreData.communityAverageGuessTotal || 0,
-            numberOfCommunityGuesses: firestoreData.numberOfCommunityGuesses || 0,
-            photoBase64: parsedProfile.photoBase64 || null,
-            name: parsedProfile.name,
-            dob: parsedProfile.dob,
-            hasProvidedDob: parsedProfile.dob ? true : false,
-            createdAt: firestoreData.createdAt || new Date(),
-          }, { merge: true });
-
-          setProfileState(parsedProfile);
-          localStorage.setItem(localKey, JSON.stringify(parsedProfile));
+          // Store in state and localStorage
+          setProfileState(finalProfile);
+          localStorage.setItem(localKey, JSON.stringify(finalProfile));
           localStorage.setItem(ACTIVE_GAGE_USER_ID_KEY, currentUser.uid);
+
+          // Merge default doc fields
+          await setDoc(
+            docRef,
+            {
+              communityAverageGuessTotal: firestoreData.communityAverageGuessTotal || 0,
+              numberOfCommunityGuesses: firestoreData.numberOfCommunityGuesses || 0,
+              guessHistory: firestoreData.guessHistory || [],
+              createdAt: firestoreData.createdAt || new Date(),
+            },
+            { merge: true }
+          );
         } catch (error) {
-          console.error('Profile load/create error:', error);
+          console.error('🔥 Error loading profile from Firestore:', error);
           setProfileState(null);
         }
       } else {
@@ -112,15 +114,20 @@ export function useProfileHook() {
         };
       });
 
-      if (currentUser?.uid) {
+      const updates: Record<string, any> = {};
+      if (data.name !== undefined) updates.name = data.name;
+      if (data.dob !== undefined) {
+        updates.dob = data.dob;
+        updates.hasProvidedDob = true;
+      }
+      if (data.photoBase64 !== undefined) updates.photoBase64 = data.photoBase64;
+
+      if (currentUser?.uid && Object.keys(updates).length > 0) {
         try {
           const docRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(docRef, {
-            ...data,
-            hasProvidedDob: data.dob ? true : undefined,
-          });
+          await updateDoc(docRef, updates);
         } catch (error) {
-          console.error("Failed to update Firestore in setProfileData:", error);
+          console.error("🔥 Failed to update profile in Firestore:", error);
         }
       }
     },
