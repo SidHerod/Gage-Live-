@@ -194,9 +194,10 @@ export function useProfileHook() {
           const docRef = doc(db, 'users', currentUser.uid);
           await updateDoc(docRef, {
             hasProvidedDob: true,
+            dob: data.dob, // ✅ ensures dob is saved in Firestore
           });
         } catch (error) {
-          console.error("Failed to update hasProvidedDob in Firestore:", error);
+          console.error("Failed to update hasProvidedDob or dob in Firestore:", error);
         }
       }
     },
