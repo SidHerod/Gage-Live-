@@ -106,13 +106,21 @@ const AgeGuessingScreen: React.FC = () => {
 
     try {
       const userDocRef = doc(db, 'users', currentUserToGuess.id);
-      await updateDoc(userDocRef, {
+
+      const payload = {
         communityAverageGuessTotal: increment(guess),
         numberOfCommunityGuesses: increment(1),
         guessHistory: arrayUnion({ guesserId: profile.id, guessValue: guess }),
-      });
+      };
+
+      console.log("🧾 FIRESTORE UPDATE");
+      console.log("👤 Target user ID:", currentUserToGuess.id);
+      console.log("👤 Guesser UID:", profile.id);
+      console.log("📦 Payload:", payload);
+
+      await updateDoc(userDocRef, payload);
     } catch (error) {
-      console.error("Error updating Firestore for guess:", error);
+      console.error("🔥 Firestore update FAILED:", error);
     }
 
     if (diff >= 1 && diff <= 3) {
@@ -164,26 +172,4 @@ const AgeGuessingScreen: React.FC = () => {
         <img
           src={currentUserToGuess.photoBase64}
           alt="User to guess"
-          className="w-48 h-48 object-cover rounded-full mx-auto mb-4"
-        />
-      )}
-      <p className="text-lg mb-2">Your Guess: {currentGuessValue}</p>
-      <input
-        type="range"
-        min="10"
-        max="100"
-        value={currentGuessValue}
-        onChange={handleSliderChange}
-        onMouseUp={handleSliderRelease}
-        className="w-full"
-      />
-      {animatedFeedback && (
-        <p className={`mt-4 text-2xl font-bold ${animatedFeedback.colorClass}`}>
-          {animatedFeedback.text}
-        </p>
-      )}
-    </div>
-  );
-};
-
-export default AgeGuessingScreen;
+          className="w-48 h-48 object-cover rounded-full mx-auto m
