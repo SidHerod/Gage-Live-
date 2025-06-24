@@ -56,50 +56,43 @@ export function useProfileHook() {
           const storedProfile = localStorage.getItem(localKey);
           let parsedProfile: UserProfile | null = storedProfile ? JSON.parse(storedProfile) : null;
 
-          if (!parsedProfile) {
-            let googlePhotoBase64: string | null = null;
-            let photoIsFromGoogle = false;
-
-            if (currentUser.photoURL) {
-              googlePhotoBase64 = await convertUrlToBase64(currentUser.photoURL);
-              if (googlePhotoBase64) photoIsFromGoogle = true;
-            }
-
-            parsedProfile = {
-              id: currentUser.uid,
-              email: currentUser.email || '',
-              name: currentUser.displayName || 'Gage User',
-              dob: '',
-              photoBase64: googlePhotoBase64,
-              photoFromGoogle: photoIsFromGoogle,
-              hasProvidedDob: false,
-              communityAverageGuess: null,
-              numberOfCommunityGuesses: 0,
-              myTotalGuessingPoints: 0,
-              myNumberOfGuessesMade: 0,
-              lastThreeGuesses: [],
-            };
-          }
-
-          // Always fetch Firestore data and merge
           const docRef = doc(db, 'users', currentUser.uid);
           const docSnap = await getDoc(docRef);
+          const firestoreData = docSnap.exists() ? docSnap.data() : {};
 
-          if (!docSnap.exists()) {
-            await setDoc(docRef, {
-              communityAverageGuessTotal: 0,
-              numberOfCommunityGuesses: 0,
-              guessHistory: [],
-              createdAt: new Date(),
-            });
-          } else {
-            const firestoreData = docSnap.data();
-            const total = firestoreData.communityAverageGuessTotal ?? 0;
-            const count = firestoreData.numberOfCommunityGuesses ?? 0;
+          let finalPhotoBase64: string | null = firestoreData.photoBase64 || null;
+          let photoIsFromGoogle = false;
 
-            parsedProfile.communityAverageGuess = count > 0 ? total / count : null;
-            parsedProfile.numberOfCommunityGuesses = count;
+          if (!finalPhotoBase64 && currentUser.photoURL) {
+            finalPhotoBase64 = await convertUrlToBase64(currentUser.photoURL);
+            if (finalPhotoBase64) photoIsFromGoogle = true;
           }
+
+          parsedProfile = {
+            id: currentUser.uid,
+            email: currentUser.email || '',
+            name: currentUser.displayName || 'Gage User',
+            dob: firestoreData.dob || '',
+            photoBase64: finalPhotoBase64,
+            photoFromGoogle: photoIsFromGoogle,
+            hasProvidedDob: firestoreData.hasProvidedDob || false,
+            communityAverageGuess: null,
+            numberOfCommunityGuesses: firestoreData.numberOfCommunityGuesses || 0,
+            myTotalGuessingPoints: 0,
+            myNumberOfGuessesMade: 0,
+            lastThreeGuesses: [],
+          };
+
+          const total = firestoreData.communityAverageGuessTotal ?? 0;
+          const count = firestoreData.numberOfCommunityGuesses ?? 0;
+          parsedProfile.communityAverageGuess = count > 0 ? total / count : null;
+          parsedProfile.numberOfCommunityGuesses = count;
+
+          await setDoc(docRef, {
+            communityAverageGuessTotal: firestoreData.communityAverageGuessTotal || 0,
+            numberOfCommunityGuesses: firestoreData.numberOfCommunityGuesses || 0,
+            createdAt: firestoreData.createdAt || new Date(),
+          }, { merge: true });
 
           setProfileState(parsedProfile);
           localStorage.setItem(localKey, JSON.stringify(parsedProfile));
