@@ -37,8 +37,7 @@ export function useProfileHook() {
         try {
           const localKey = PROFILE_STORAGE_PREFIX + currentUser.uid;
           const storedProfile = localStorage.getItem(localKey);
-          let parsedProfile: UserProfile | null = storedProfile ? JSON.parse(storedProfile) : null;
-
+          let parsedProfile: UserProfile | null = null; // ← skip using stale localStorage
           const docRef = doc(db, 'users', currentUser.uid);
           const docSnap = await getDoc(docRef);
           const firestoreData = docSnap.exists() ? docSnap.data() : {};
