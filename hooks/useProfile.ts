@@ -19,28 +19,6 @@ export function calculateAge(dobString: string): number {
   return age;
 }
 
-async function convertUrlToBase64(url: string): Promise<string | null> {
-  try {
-    // 🔧 Force higher-res image from Google if applicable
-    if (url.includes('googleusercontent')) {
-      url = url.replace(/s\d+-c/, 's400-c');
-    }
-
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error("Error converting image to base64:", error);
-    return null;
-  }
-}
-
 export function useProfileHook() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const [profileState, setProfileState] = useState<UserProfile | null>(null);
@@ -55,7 +33,7 @@ export function useProfileHook() {
     const loadProfile = async () => {
       setIsProfileLoading(true);
 
-      if (currentUser && currentUser.uid) {
+      if (currentUser?.uid) {
         try {
           const localKey = PROFILE_STORAGE_PREFIX + currentUser.uid;
           const storedProfile = localStorage.getItem(localKey);
@@ -65,21 +43,12 @@ export function useProfileHook() {
           const docSnap = await getDoc(docRef);
           const firestoreData = docSnap.exists() ? docSnap.data() : {};
 
-          let finalPhotoBase64: string | null = firestoreData.photoBase64 || null;
-          let photoIsFromGoogle = false;
-
-          if (!finalPhotoBase64 && currentUser.photoURL) {
-            finalPhotoBase64 = await convertUrlToBase64(currentUser.photoURL);
-            if (finalPhotoBase64) photoIsFromGoogle = true;
-          }
-
           parsedProfile = {
             id: currentUser.uid,
             email: currentUser.email || '',
             name: currentUser.displayName || 'Gage User',
             dob: firestoreData.dob || '',
-            photoBase64: finalPhotoBase64,
-            photoFromGoogle: photoIsFromGoogle,
+            photoBase64: firestoreData.photoBase64 || null,
             hasProvidedDob: firestoreData.hasProvidedDob || false,
             communityAverageGuess: null,
             numberOfCommunityGuesses: firestoreData.numberOfCommunityGuesses || 0,
@@ -94,8 +63,8 @@ export function useProfileHook() {
           parsedProfile.numberOfCommunityGuesses = count;
 
           await setDoc(docRef, {
-            communityAverageGuessTotal: firestoreData.communityAverageGuessTotal || 0,
-            numberOfCommunityGuesses: firestoreData.numberOfCommunityGuesses || 0,
+            communityAverageGuessTotal: total,
+            numberOfCommunityGuesses: count,
             createdAt: firestoreData.createdAt || new Date(),
           }, { merge: true });
 
@@ -136,16 +105,18 @@ export function useProfileHook() {
           ...prev,
           ...data,
           hasProvidedDob: data.dob !== undefined ? !!data.dob : prev.hasProvidedDob,
-          photoFromGoogle: data.photoFromGoogle !== undefined ? data.photoFromGoogle : prev.photoFromGoogle,
         };
       });
 
-      if (data.dob && currentUser?.uid) {
+      if ((data.dob || data.photoBase64) && currentUser?.uid) {
         try {
+          const updates: any = {};
+          if (data.dob) updates.hasProvidedDob = true;
+          if (data.photoBase64) updates.photoBase64 = data.photoBase64;
           const docRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(docRef, { hasProvidedDob: true });
+          await updateDoc(docRef, updates);
         } catch (error) {
-          console.error("Failed to update hasProvidedDob in Firestore:", error);
+          console.error("Failed to update Firestore during profile data update:", error);
         }
       }
     },
