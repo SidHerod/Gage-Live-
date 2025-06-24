@@ -39,7 +39,10 @@ const AgeGuessingScreen: React.FC = () => {
   useEffect(() => {
     const fetchProfiles = async () => {
       if (profile?.id) {
+        console.log('👤 Current user UID:', profile.id);
         const availableProfiles = await getAllGuessableProfiles(profile.id);
+        console.log('👥 Available profiles:', availableProfiles);
+
         if (availableProfiles.length === 0) {
           setNoProfilesMessage("Come back soon to gauge more ages");
           setShuffledProfiles([]);
@@ -184,4 +187,3 @@ const AgeGuessingScreen: React.FC = () => {
 };
 
 export default AgeGuessingScreen;
-
