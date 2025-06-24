@@ -3,10 +3,6 @@ import { collection, getDocs } from 'firebase/firestore';
 import { calculateAge } from './useProfile';
 import type { OtherUser } from '../types';
 
-/**
- * Fetches all guessable user profiles from Firestore
- * Excludes the current user and those without required data
- */
 export async function getAllGuessableProfiles(currentUserId: string): Promise<OtherUser[]> {
   const profiles: OtherUser[] = [];
   try {
