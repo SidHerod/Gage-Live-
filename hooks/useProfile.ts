@@ -81,21 +81,22 @@ export function useProfileHook() {
             };
           }
 
+          // Always fetch Firestore data and merge
           const docRef = doc(db, 'users', currentUser.uid);
           const docSnap = await getDoc(docRef);
 
           if (!docSnap.exists()) {
-            // 🔧 Create default doc for new users
             await setDoc(docRef, {
               communityAverageGuessTotal: 0,
               numberOfCommunityGuesses: 0,
-              guessHistory: [], // <-- Key fix here
+              guessHistory: [],
               createdAt: new Date(),
             });
           } else {
             const firestoreData = docSnap.data();
             const total = firestoreData.communityAverageGuessTotal ?? 0;
             const count = firestoreData.numberOfCommunityGuesses ?? 0;
+
             parsedProfile.communityAverageGuess = count > 0 ? total / count : null;
             parsedProfile.numberOfCommunityGuesses = count;
           }
