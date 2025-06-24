@@ -105,24 +105,18 @@ const AgeGuessingScreen: React.FC = () => {
     updateUserGuessingStats(pointsEarned, currentUserToGuess, guess);
 
     try {
-      const userDocRef = doc(db, 'users', currentUserToGuess.id);
-
-      const payload = {
-        communityAverageGuessTotal: increment(guess),
-        numberOfCommunityGuesses: increment(1),
-        guessHistory: arrayUnion({ guesserId: profile.id, guessValue: guess }),
-      };
-
-      console.log("🧾 FIRESTORE UPDATE");
-      console.log("👤 Target user ID:", currentUserToGuess.id);
-      console.log("👤 Guesser UID:", profile.id);
-      console.log("📦 Payload:", payload);
-
-      await updateDoc(userDocRef, payload);
-    } catch (error) {
-      console.error("🔥 Firestore update FAILED:", error);
-    }
-
+  const userDocRef = doc(db, 'users', currentUserToGuess.id);
+  await updateDoc(userDocRef, {
+    communityAverageGuessTotal: increment(guess),
+    numberOfCommunityGuesses: increment(1),
+    guessHistory: arrayUnion({
+      guesserId: profile.id,
+      guessValue: guess
+    }),
+  });
+} catch (error) {
+  console.error("🔥 Firestore update FAILED:", error);
+}
     if (diff >= 1 && diff <= 3) {
       setAnimatedFeedback({ text: diff.toString(), colorClass: 'text-[#ff1818]', key: Date.now() });
       setTimeout(() => {
