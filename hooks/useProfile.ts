@@ -1,13 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type {
-  UserProfile,
-  OtherUser,
-  GuessRecord,
-  EnrichedUserProfile,
-  SetProfilePayload,
-} from '../types';
+import type { UserProfile, GuessRecord, EnrichedUserProfile, SetProfilePayload } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const PROFILE_STORAGE_PREFIX = 'gageUserProfile_firebase_uid_v1_';
@@ -23,37 +17,6 @@ export function calculateAge(dobString: string): number {
     age--;
   }
   return age;
-}
-
-export function getAvailableProfilesForGuessing(currentUserId: string): OtherUser[] {
-  const profiles: OtherUser[] = [];
-  if (typeof window === 'undefined' || !window.localStorage) return profiles;
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(PROFILE_STORAGE_PREFIX)) {
-      const userIdFromKey = key.substring(PROFILE_STORAGE_PREFIX.length);
-      if (userIdFromKey === currentUserId) continue;
-      try {
-        const storedProfileString = localStorage.getItem(key);
-        if (storedProfileString) {
-          const userProfile = JSON.parse(storedProfileString) as UserProfile;
-          if (userProfile?.id && userProfile.dob && userProfile.photoBase64) {
-            profiles.push({
-              id: userProfile.id,
-              actualAge: calculateAge(userProfile.dob),
-              photoBase64: userProfile.photoBase64,
-              name: userProfile.name || 'Gage User',
-            });
-          }
-        }
-      } catch (e) {
-        console.warn(`Failed to parse profile from localStorage key ${key}:`, e);
-      }
-    }
-  }
-
-  return profiles;
 }
 
 async function convertUrlToBase64(url: string): Promise<string | null> {
@@ -83,8 +46,6 @@ export function useProfileHook() {
       setIsProfileLoading(true);
       return;
     }
-
-    let unsubscribe: (() => void) | null = null;
 
     const loadProfile = async () => {
       setIsProfileLoading(true);
@@ -121,26 +82,22 @@ export function useProfileHook() {
           }
 
           const docRef = doc(db, 'users', currentUser.uid);
-
-          unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if (!docSnap.exists()) return;
-            const firestoreData = docSnap.data();
-            const total = firestoreData.communityAverageGuessTotal ?? 0;
-            const count = firestoreData.numberOfCommunityGuesses ?? 0;
-            setProfileState(prev => prev && ({
-              ...prev,
-              communityAverageGuess: count > 0 ? total / count : null,
-              numberOfCommunityGuesses: count,
-            }));
-          });
-
           const docSnap = await getDoc(docRef);
+
           if (!docSnap.exists()) {
+            // 🔧 Create default doc for new users
             await setDoc(docRef, {
               communityAverageGuessTotal: 0,
               numberOfCommunityGuesses: 0,
+              guessHistory: [], // <-- Key fix here
               createdAt: new Date(),
             });
+          } else {
+            const firestoreData = docSnap.data();
+            const total = firestoreData.communityAverageGuessTotal ?? 0;
+            const count = firestoreData.numberOfCommunityGuesses ?? 0;
+            parsedProfile.communityAverageGuess = count > 0 ? total / count : null;
+            parsedProfile.numberOfCommunityGuesses = count;
           }
 
           setProfileState(parsedProfile);
@@ -159,15 +116,10 @@ export function useProfileHook() {
     };
 
     loadProfile();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
   }, [currentUser, isAuthLoading]);
 
   useEffect(() => {
     if (isProfileLoading || isAuthLoading) return;
-
     if (profileState?.id) {
       localStorage.setItem(PROFILE_STORAGE_PREFIX + profileState.id, JSON.stringify(profileState));
       localStorage.setItem(ACTIVE_GAGE_USER_ID_KEY, profileState.id);
@@ -192,19 +144,16 @@ export function useProfileHook() {
       if (data.dob && currentUser?.uid) {
         try {
           const docRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(docRef, {
-            hasProvidedDob: true,
-            dob: data.dob, // ✅ ensures dob is saved in Firestore
-          });
+          await updateDoc(docRef, { hasProvidedDob: true });
         } catch (error) {
-          console.error("Failed to update hasProvidedDob or dob in Firestore:", error);
+          console.error("Failed to update hasProvidedDob in Firestore:", error);
         }
       }
     },
     [currentUser]
   );
 
-  const updateUserGuessingStats = useCallback((points: number, guessedUser: OtherUser, guess: number) => {
+  const updateUserGuessingStats = useCallback((points: number, guessedUser, guess: number) => {
     setProfileState(prev => {
       if (!prev) return null;
       const newGuess: GuessRecord = {
@@ -224,30 +173,6 @@ export function useProfileHook() {
     });
   }, []);
 
-  const addCommunityGuess = useCallback(async (targetUserId: string, guess: number) => {
-    try {
-      const ref = doc(db, 'users', targetUserId);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const data = snap.data();
-        const total = typeof data.communityAverageGuessTotal === 'number' ? data.communityAverageGuessTotal : 0;
-        const count = typeof data.numberOfCommunityGuesses === 'number' ? data.numberOfCommunityGuesses : 0;
-        await updateDoc(ref, {
-          communityAverageGuessTotal: total + guess,
-          numberOfCommunityGuesses: count + 1,
-        });
-      } else {
-        await setDoc(ref, {
-          communityAverageGuessTotal: guess,
-          numberOfCommunityGuesses: 1,
-          createdAt: new Date(),
-        });
-      }
-    } catch (err) {
-      console.error('Firestore community guess error:', err);
-    }
-  }, []);
-
   const clearProfile = useCallback(() => setProfileState(null), []);
 
   const enrichedProfile = useMemo((): EnrichedUserProfile | null => {
@@ -263,7 +188,6 @@ export function useProfileHook() {
     profile: enrichedProfile,
     setProfileData,
     updateUserGuessingStats,
-    addCommunityGuess,
     clearProfile,
     isLoading: isProfileLoading,
   };
