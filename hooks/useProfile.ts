@@ -33,7 +33,7 @@ export function useProfileHook() {
     const loadProfile = async () => {
       setIsProfileLoading(true);
 
-      if (currentUser?.uid) {
+      if (currentUser && currentUser.uid) {
         try {
           const localKey = PROFILE_STORAGE_PREFIX + currentUser.uid;
           const storedProfile = localStorage.getItem(localKey);
@@ -46,9 +46,10 @@ export function useProfileHook() {
           parsedProfile = {
             id: currentUser.uid,
             email: currentUser.email || '',
-            name: currentUser.displayName || 'Gage User',
+            name: firestoreData.name || currentUser.displayName || 'Gage User',
             dob: firestoreData.dob || '',
             photoBase64: firestoreData.photoBase64 || null,
+            photoFromGoogle: false,
             hasProvidedDob: firestoreData.hasProvidedDob || false,
             communityAverageGuess: null,
             numberOfCommunityGuesses: firestoreData.numberOfCommunityGuesses || 0,
@@ -63,8 +64,12 @@ export function useProfileHook() {
           parsedProfile.numberOfCommunityGuesses = count;
 
           await setDoc(docRef, {
-            communityAverageGuessTotal: total,
-            numberOfCommunityGuesses: count,
+            communityAverageGuessTotal: firestoreData.communityAverageGuessTotal || 0,
+            numberOfCommunityGuesses: firestoreData.numberOfCommunityGuesses || 0,
+            photoBase64: parsedProfile.photoBase64 || null,
+            name: parsedProfile.name,
+            dob: parsedProfile.dob,
+            hasProvidedDob: parsedProfile.dob ? true : false,
             createdAt: firestoreData.createdAt || new Date(),
           }, { merge: true });
 
@@ -108,15 +113,15 @@ export function useProfileHook() {
         };
       });
 
-      if ((data.dob || data.photoBase64) && currentUser?.uid) {
+      if (currentUser?.uid) {
         try {
-          const updates: any = {};
-          if (data.dob) updates.hasProvidedDob = true;
-          if (data.photoBase64) updates.photoBase64 = data.photoBase64;
           const docRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(docRef, updates);
+          await updateDoc(docRef, {
+            ...data,
+            hasProvidedDob: data.dob ? true : undefined,
+          });
         } catch (error) {
-          console.error("Failed to update Firestore during profile data update:", error);
+          console.error("Failed to update Firestore in setProfileData:", error);
         }
       }
     },
