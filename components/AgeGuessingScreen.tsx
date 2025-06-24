@@ -2,7 +2,7 @@ import { db } from '../firebase';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../contexts/ProfileContext';
-import { getAvailableProfilesForGuessing } from '../hooks/useProfile';
+import { getAllGuessableProfiles } from '../hooks/firestoreHelpers';
 import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import type { OtherUser } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -37,18 +37,22 @@ const AgeGuessingScreen: React.FC = () => {
   }, [isProfileLoading, profile, navigate]);
 
   useEffect(() => {
-    if (profile && profile.id) {
-      const availableProfiles = getAvailableProfilesForGuessing(profile.id);
-      if (availableProfiles.length === 0) {
-        setNoProfilesMessage("Come back soon to gauge more ages");
-        setShuffledProfiles([]);
-      } else {
-        setNoProfilesMessage(null);
-        setShuffledProfiles([...availableProfiles].sort(() => Math.random() - 0.5));
+    const fetchProfiles = async () => {
+      if (profile?.id) {
+        const availableProfiles = await getAllGuessableProfiles(profile.id);
+        if (availableProfiles.length === 0) {
+          setNoProfilesMessage("Come back soon to gauge more ages");
+          setShuffledProfiles([]);
+        } else {
+          setNoProfilesMessage(null);
+          setShuffledProfiles([...availableProfiles].sort(() => Math.random() - 0.5));
+        }
+        setCurrentIndex(0);
+        setGagedAnimationStep('idle');
       }
-      setCurrentIndex(0);
-      setGagedAnimationStep('idle');
-    }
+    };
+
+    fetchProfiles();
   }, [profile?.id, isProfileLoading]);
 
   useEffect(() => {
@@ -180,3 +184,4 @@ const AgeGuessingScreen: React.FC = () => {
 };
 
 export default AgeGuessingScreen;
+
