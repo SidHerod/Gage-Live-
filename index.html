@@ -2,36 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gage - Community Age Guesser</title>
+    <title>Gage – Community Age Guesser</title>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
 
-    <!-- Load Plus Jakarta Sans -->
+    <!-- Font: Plus Jakarta Sans -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
 
-    <!-- Import map for external ESM dependencies -->
-    <script type="importmap">
-    {
-      "imports": {
-        "react/": "https://esm.sh/react@^19.1.0/",
-        "react": "https://esm.sh/react@^19.1.0",
-        "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-        "react/jsx-runtime": "https://esm.sh/react@^19.1.0/jsx-runtime",
-        "react/jsx-dev-runtime": "https://esm.sh/react@^19.1.0/jsx-dev-runtime",
-        "react-router-dom": "https://esm.sh/react-router-dom@^7.6.0",
-        "@google/genai": "https://esm.sh/@google/genai@^1.0.1",
-        "firebase/app": "https://esm.sh/firebase@^11.8.1/app",
-        "firebase/auth": "https://esm.sh/firebase@^11.8.1/auth",
-        "firebase/": "https://esm.sh/firebase@^11.8.1/"
-      }
-    }
-    </script>
-
-    <!-- Local Tailwind build and custom styles -->
+    <!-- Tailwind & App Styles -->
     <link rel="stylesheet" href="/index.css" />
 
+    <!-- Import Maps -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react/": "https://esm.sh/react@^19.1.0/",
+          "react": "https://esm.sh/react@^19.1.0",
+          "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+          "react/jsx-runtime": "https://esm.sh/react@^19.1.0/jsx-runtime",
+          "react/jsx-dev-runtime": "https://esm.sh/react@^19.1.0/jsx-dev-runtime",
+          "react-router-dom": "https://esm.sh/react-router-dom@^7.6.0",
+          "@google/genai": "https://esm.sh/@google/genai@^1.0.1",
+          "firebase/app": "https://esm.sh/firebase@^11.8.1/app",
+          "firebase/auth": "https://esm.sh/firebase@^11.8.1/auth",
+          "firebase/": "https://esm.sh/firebase@^11.8.1/"
+        }
+      }
+    </script>
+
+    <!-- Optional Global Scrollbar & Animation Styling -->
     <style>
-      /* Scrollbar Styling */
+      /* Scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
       }
@@ -46,15 +47,7 @@
         background: #A0A0A0;
       }
 
-      /* Global Base Styles */
-      body {
-        background-color: #F0E1D1;
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        font-weight: 400;
-        text-transform: uppercase;
-      }
-
-      /* Animation: ping-once */
+      /* Ping animation */
       @keyframes ping-once {
         0% {
           transform: scale(0.7);
@@ -78,7 +71,7 @@
       }
     </style>
   </head>
-  <body>
+  <body class="bg-[#F0E1D1] font-sans text-gray-900">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
