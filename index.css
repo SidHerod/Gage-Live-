@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Apply global font without affecting layout */
 @layer base {
   html {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-[#F0E1D1] text-gray-800;
+    background-color: #F0E1D1; /* Your original pale peach */
+    color: #1f2937; /* Tailwind's gray-800 for readability */
   }
 }
