@@ -5,15 +5,16 @@
 @layer base {
   html {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 16px;
+    /* DO NOT manually set font-size here unless you want to override Tailwind's base (not recommended) */
   }
 
-  * {
-    text-transform: none; /* ⬅️ This ensures no text is forced uppercase */
+  *, *::before, *::after {
+    text-transform: none !important;
+    box-sizing: border-box;
   }
 
   body {
-    @apply text-base text-slate-800;
+    @apply text-base text-slate-800 bg-[#F0E1D1];
   }
 
   h1, h2, h3, h4, h5, h6 {
