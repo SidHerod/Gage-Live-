@@ -159,7 +159,7 @@ const MainAppLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0E1D1] text-slate-800 flex flex-col">
+    <div className="min-h-screen bg-[#F0E1D1] text-slate-800 flex flex-col font-sans">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-lg">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-20">
