@@ -8,6 +8,10 @@
     font-size: 16px;
   }
 
+  * {
+    text-transform: none; /* ⬅️ This ensures no text is forced uppercase */
+  }
+
   body {
     @apply text-base text-slate-800;
   }
