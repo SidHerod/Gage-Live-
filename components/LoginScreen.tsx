@@ -23,7 +23,7 @@ const LoginScreen: React.FC = () => {
     <div className="min-h-[calc(100vh-200px)] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <GageLogoIcon className="h-16 w-auto text-[#ff1818] mx-auto mb-4" />
+         <GageLogoIcon className="h-12 w-auto text-[#ff1818] mx-auto mb-4" />
           <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff4545] to-[#ff1818]">
             Welcome to GAGE
           </h2>
