@@ -4,24 +4,14 @@
 
 @layer base {
   html {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    /* DO NOT manually set font-size here unless you want to override Tailwind's base (not recommended) */
-  }
-
-  *, *::before, *::after {
-    text-transform: none !important;
-    box-sizing: border-box;
+    font-family: theme('fontFamily.sans'); /* This uses the Tailwind config */
   }
 
   body {
-    @apply text-base text-slate-800 bg-[#F0E1D1];
+    @apply text-base text-slate-800;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold text-slate-900;
-  }
-
-  p {
-    @apply text-base;
   }
 }
