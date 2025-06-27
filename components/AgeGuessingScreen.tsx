@@ -176,8 +176,8 @@ const AgeGuessingScreen: React.FC = () => {
         max="100"
         value={currentGuessValue}
         onChange={handleSliderChange}
-        onMouseUp={handleSliderRelease}
-        className="w-full"
+        onPointerUp={handleSliderRelease} // 🔥 Better mobile support
+        className="w-full h-2 bg-[#ff1818] rounded-lg appearance-none cursor-pointer"
       />
       {animatedFeedback && (
         <p className={`mt-4 text-2xl font-bold ${animatedFeedback.colorClass}`}>
