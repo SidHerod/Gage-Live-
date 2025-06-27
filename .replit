@@ -7,3 +7,7 @@ packages = ["openssh"]
 
 [deployment]
 run = ["sh", "-c", "npm run dev"]
+
+[[ports]]
+localPort = 5175
+externalPort = 80
