@@ -13,14 +13,14 @@ interface AnimatedFeedback {
   key: number;
 }
 
-type GagedAnimationStep = 'idle' | 'fadingOutProfile' | 'showingGage' | 'showingGaged' | 'gagedComplete';
+type GagedAnimationStep = 'idle' | 'showingFeedback';
 
 const AgeGuessingScreen: React.FC = () => {
   const navigate = useNavigate();
   const { profile, updateUserGuessingStats, isLoading: isProfileLoading } = useProfile();
 
   const [currentUserToGuess, setCurrentUserToGuess] = useState<OtherUser | null>(null);
-  const [currentGuessValue, setCurrentGuessValue] = useState<number>(30);
+  const [currentGuessValue, setCurrentGuessValue] = useState<number>(16);
   const [shuffledProfiles, setShuffledProfiles] = useState<OtherUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -39,10 +39,7 @@ const AgeGuessingScreen: React.FC = () => {
   useEffect(() => {
     const fetchProfiles = async () => {
       if (profile?.id) {
-        console.log('👤 Current user UID:', profile.id);
         const availableProfiles = await getAllGuessableProfiles(profile.id);
-        console.log('👥 Available profiles:', availableProfiles);
-
         if (availableProfiles.length === 0) {
           setNoProfilesMessage("Come back soon to gauge more ages");
           setShuffledProfiles([]);
@@ -54,7 +51,6 @@ const AgeGuessingScreen: React.FC = () => {
         setGagedAnimationStep('idle');
       }
     };
-
     fetchProfiles();
   }, [profile?.id, isProfileLoading]);
 
@@ -62,27 +58,11 @@ const AgeGuessingScreen: React.FC = () => {
     if (gagedAnimationStep === 'idle' && shuffledProfiles.length > 0 && profile) {
       const newIndex = currentIndex % shuffledProfiles.length;
       setCurrentUserToGuess(shuffledProfiles[newIndex]);
-      setCurrentGuessValue(30);
+      setCurrentGuessValue(16);
     } else if (gagedAnimationStep === 'idle' && shuffledProfiles.length === 0 && profile && !isProfileLoading) {
       setCurrentUserToGuess(null);
     }
   }, [shuffledProfiles, currentIndex, profile, gagedAnimationStep, isProfileLoading]);
-
-  useEffect(() => {
-    let timer: number;
-    if (gagedAnimationStep === 'fadingOutProfile') {
-      timer = window.setTimeout(() => setGagedAnimationStep('showingGage'), 300);
-    } else if (gagedAnimationStep === 'showingGage') {
-      timer = window.setTimeout(() => setGagedAnimationStep('showingGaged'), 700);
-    } else if (gagedAnimationStep === 'showingGaged') {
-      timer = window.setTimeout(() => setGagedAnimationStep('gagedComplete'), 1500);
-    } else if (gagedAnimationStep === 'gagedComplete') {
-      setGagedAnimationStep('idle');
-      setCurrentIndex(prev => prev + 1);
-      submissionLockRef.current = false;
-    }
-    return () => window.clearTimeout(timer);
-  }, [gagedAnimationStep]);
 
   const submitGuessAndLoadNext = useCallback(async () => {
     if (submissionLockRef.current || !currentUserToGuess || !profile || gagedAnimationStep !== 'idle') return;
@@ -105,34 +85,37 @@ const AgeGuessingScreen: React.FC = () => {
     updateUserGuessingStats(pointsEarned, currentUserToGuess, guess);
 
     try {
-  const userDocRef = doc(db, 'users', currentUserToGuess.id);
-  await updateDoc(userDocRef, {
-    communityAverageGuessTotal: increment(guess),
-    numberOfCommunityGuesses: increment(1),
-    guessHistory: arrayUnion({
-      guesserId: profile.id,
-      guessValue: guess
-    }),
-  });
-} catch (error) {
-  console.error("🔥 Firestore update FAILED:", error);
-}
-    if (diff >= 1 && diff <= 3) {
+      const userDocRef = doc(db, 'users', currentUserToGuess.id);
+      await updateDoc(userDocRef, {
+        communityAverageGuessTotal: increment(guess),
+        numberOfCommunityGuesses: increment(1),
+        guessHistory: arrayUnion({ guesserId: profile.id, guessValue: guess }),
+      });
+    } catch (error) {
+      console.error("🔥 Firestore update FAILED:", error);
+    }
+
+    if (diff === 0) {
+      navigate('/perfect-hit');
+      return;
+    }
+
+    if (diff === 1 || diff === 2) {
       setAnimatedFeedback({ text: diff.toString(), colorClass: 'text-[#ff1818]', key: Date.now() });
+      setGagedAnimationStep('showingFeedback');
+
       setTimeout(() => {
         setAnimatedFeedback(null);
+        setGagedAnimationStep('idle');
         setCurrentIndex(prev => prev + 1);
         submissionLockRef.current = false;
       }, 1500);
-    } else if (diff === 0) {
-      setGagedAnimationStep('fadingOutProfile');
     } else {
-      setTimeout(() => {
-        setCurrentIndex(prev => prev + 1);
-        submissionLockRef.current = false;
-      }, 500);
+      setCurrentIndex(prev => prev + 1);
+      setGagedAnimationStep('idle');
+      submissionLockRef.current = false;
     }
-  }, [currentUserToGuess, profile, currentGuessValue, updateUserGuessingStats, gagedAnimationStep]);
+  }, [currentUserToGuess, profile, currentGuessValue, updateUserGuessingStats, gagedAnimationStep, navigate]);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCurrentGuessValue(parseInt(e.target.value, 10));
@@ -161,7 +144,6 @@ const AgeGuessingScreen: React.FC = () => {
 
   return (
     <div className="text-center p-10">
-      <h1 className="text-3xl font-bold mb-4">Guess Their Age</h1>
       {currentUserToGuess && (
         <img
           src={currentUserToGuess.photoBase64}
@@ -172,15 +154,21 @@ const AgeGuessingScreen: React.FC = () => {
       <p className="text-lg mb-2">Your Guess: {currentGuessValue}</p>
       <input
         type="range"
-        min="10"
+        min="16"
         max="100"
         value={currentGuessValue}
         onChange={handleSliderChange}
-        onPointerUp={handleSliderRelease} // 🔥 Better mobile support
-        className="w-full h-2 bg-[#ff1818] rounded-lg appearance-none cursor-pointer"
+        onPointerUp={handleSliderRelease}
+        className="w-56 h-2 bg-[#ff1818] rounded-lg appearance-none cursor-pointer
+                   [&::-webkit-slider-thumb]:appearance-none 
+                   [&::-webkit-slider-thumb]:h-6 
+                   [&::-webkit-slider-thumb]:w-6 
+                   [&::-webkit-slider-thumb]:rounded-full 
+                   [&::-webkit-slider-thumb]:bg-[#ff1818]
+                   [&::-moz-range-thumb]:bg-[#ff1818]"
       />
       {animatedFeedback && (
-        <p className={`mt-4 text-2xl font-bold ${animatedFeedback.colorClass}`}>
+        <p className={`mt-4 text-5xl font-extrabold ${animatedFeedback.colorClass}`}>
           {animatedFeedback.text}
         </p>
       )}

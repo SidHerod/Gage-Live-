@@ -16,6 +16,8 @@ import PhotoUploadScreen from './components/PhotoUploadScreen';
 import AgeGuessingScreen from './components/AgeGuessingScreen';
 import StatisticsScreen from './components/StatisticsScreen';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import PerfectHitScreen from './components/PerfectHitScreen'; // <-- Add this
+
 import LoadingSpinner from './components/LoadingSpinner';
 import {
   UserIcon,
@@ -38,14 +40,11 @@ const AppContent: React.FC = () => {
     if (currentUser) {
       if (!profile) return;
 
-      const onPublicPage = ['/', '/login'].includes(location.pathname);
-      const onProtectedPage = ['/game', '/statistics'].includes(location.pathname);
-
       if (!profile.hasProvidedDob && location.pathname !== '/account') {
         navigate('/account', { replace: true });
       } else if (!profile.photoBase64 && location.pathname !== '/upload-photo') {
         navigate('/upload-photo', { replace: true });
-      } else if (onPublicPage && profileIsComplete) {
+      } else if (['/', '/login'].includes(location.pathname) && profileIsComplete) {
         navigate('/game', { replace: true });
       }
     } else if (location.pathname !== '/login') {
@@ -138,6 +137,7 @@ const AppContent: React.FC = () => {
           )
         }
       />
+      <Route path="/perfect-hit" element={<PerfectHitScreen />} /> {/* <-- New route */}
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
@@ -188,9 +188,7 @@ const MainAppLayout: React.FC = () => {
 
             <div className="w-1/3 flex justify-center">
               <button
-                onClick={() =>
-                  navigate(profileIsComplete ? '/game' : '/login')
-                }
+                onClick={() => navigate(profileIsComplete ? '/game' : '/login')}
                 className="text-[#ff1818]"
               >
                 <GageLogoIcon className="h-10 sm:h-12 w-auto" />
