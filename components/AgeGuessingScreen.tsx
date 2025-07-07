@@ -143,15 +143,17 @@ const AgeGuessingScreen: React.FC = () => {
   }
 
   return (
-    <div className="text-center p-10">
+    <main className="flex flex-col items-center justify-center p-4 min-h-screen py-0 !py-0">
       {currentUserToGuess && (
-        <img
-          src={currentUserToGuess.photoBase64}
-          alt="User to guess"
-          className="w-48 h-64 object-cover rounded-xl mx-auto mb-4 shadow"
-        />
+        <div className="w-[345px] h-[460px] mx-auto overflow-hidden rounded-2xl shadow-lg mb-0">
+          <img
+            src={currentUserToGuess.photoBase64}
+            alt="User to guess"
+            className="w-full h-full object-cover"
+          />
+        </div>
       )}
-      <p className="text-lg mb-2">Your Guess: {currentGuessValue}</p>
+      <p className="text-lg mb-1">Your Guess: {currentGuessValue}</p>
       <input
         type="range"
         min="16"
@@ -159,7 +161,7 @@ const AgeGuessingScreen: React.FC = () => {
         value={currentGuessValue}
         onChange={handleSliderChange}
         onPointerUp={handleSliderRelease}
-        className="w-56 h-2 bg-[#ff1818] rounded-lg appearance-none cursor-pointer
+        className="w-64 h-2 bg-[#ff1818] rounded-lg appearance-none cursor-pointer
                    [&::-webkit-slider-thumb]:appearance-none 
                    [&::-webkit-slider-thumb]:h-6 
                    [&::-webkit-slider-thumb]:w-6 
@@ -172,7 +174,7 @@ const AgeGuessingScreen: React.FC = () => {
           {animatedFeedback.text}
         </p>
       )}
-    </div>
+    </main>
   );
 };
 

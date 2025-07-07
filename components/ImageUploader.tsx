@@ -1,18 +1,17 @@
-
 import React, { useState, useCallback, useRef } from 'react';
-import { UploadIcon, CameraIcon } from './icons'; 
+import { UploadIcon, CameraIcon } from './icons';
 
 interface ImageUploaderProps {
   onImageUpload: (base64: string, file: File) => void;
   currentImagePreview?: string | null;
   label: string;
-  aspectRatio?: 'square' | 'portrait' | 'landscape' | 'custom'; // For styling the preview area
-  idSuffix?: string; // To ensure unique IDs if multiple uploaders are on a page
+  aspectRatio?: 'square' | 'portrait' | 'landscape' | 'custom';
+  idSuffix?: string;
 }
 
-const MAX_IMAGE_WIDTH = 512;
-const MAX_IMAGE_HEIGHT = 512;
-const IMAGE_QUALITY = 0.8; // JPEG quality (0.0 to 1.0)
+const MAX_IMAGE_WIDTH = 1200;
+const MAX_IMAGE_HEIGHT = 1200;
+const IMAGE_QUALITY = 0.9;
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({
   onImageUpload,
@@ -30,36 +29,33 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     if (files && files[0]) {
       processFile(files[0]);
     }
-    // Reset the input value to allow re-uploading the same file if needed
     if (event.target) {
-        event.target.value = '';
+      event.target.value = '';
     }
-  }, [onImageUpload]); // processFile is memoized, so onImageUpload is the key dependency
+  }, []);
 
   const processFile = useCallback((file: File) => {
     setError(null);
     if (!file.type.startsWith('image/')) {
-      setError('Invalid file type. Please upload an image (JPEG, PNG, GIF, WebP).');
+      setError('Invalid file type. Please upload an image.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) { // Increased to 10MB for original upload before compression
-        setError('File is too large. Maximum original size is 10MB.');
-        return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File is too large. Max 10MB.');
+      return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const originalBase64 = e.target?.result as string;
       if (!originalBase64) {
-        setError('Failed to read file. Please try again.');
+        setError('Failed to read file.');
         return;
       }
 
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
         let { width, height } = img;
-
         if (width > height) {
           if (width > MAX_IMAGE_WIDTH) {
             height = Math.round(height * (MAX_IMAGE_WIDTH / width));
@@ -72,35 +68,32 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           }
         }
 
+        const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          setError('Could not process image. Canvas context unavailable.');
-          onImageUpload(originalBase64, file); // Fallback to original if canvas fails
+          setError('Canvas error.');
+          onImageUpload(originalBase64, file);
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        
-        // Use image/jpeg for compression. For PNGs with transparency, this will lose transparency.
-        // If transparency is critical, one might consider conditional logic or storing as PNG (larger).
-        // For profile pictures, JPEG is generally acceptable and offers good compression.
-        const resizedBase64 = canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
-        
-        // Check if resized is smaller, could be larger for very small images + jpeg overhead
-        if (resizedBase64.length < originalBase64.length || file.type !== 'image/jpeg') {
-            onImageUpload(resizedBase64, file);
-        } else {
-            onImageUpload(originalBase64, file); // Use original if compressed is not smaller (e.g. already optimized JPEG)
+
+        let outputType = file.type;
+        if (outputType !== 'image/png' && outputType !== 'image/webp') {
+          outputType = 'image/jpeg';
         }
+
+        const resizedBase64 = canvas.toDataURL(outputType, IMAGE_QUALITY);
+        onImageUpload(resizedBase64, file);
       };
       img.onerror = () => {
-        setError('Failed to load image for processing. Please try a different image.');
+        setError('Failed to process image.');
       };
       img.src = originalBase64;
     };
     reader.onerror = () => {
-      setError('Failed to read file. Please try again.');
+      setError('Failed to read file.');
     };
     reader.readAsDataURL(file);
   }, [onImageUpload]);
@@ -134,7 +127,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   if (aspectRatio === 'portrait') aspectClass = 'aspect-[3/4]';
   else if (aspectRatio === 'landscape') aspectClass = 'aspect-video';
 
-
   return (
     <div className="w-full">
       <label
@@ -157,8 +149,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
               <span className="font-medium text-[#ff1818] group-hover:text-[#ff4545]">Upload a file</span>
               <p className="pl-1">or drag and drop</p>
             </div>
-            <p className="text-xs text-gray-500">PNG, JPG, GIF, WebP. Max 10MB original.</p>
-            <p className="text-xs text-gray-500">(Will be resized & compressed)</p>
+            <p className="text-xs text-gray-500">PNG, JPG, GIF, WebP. Max 10MB.</p>
+            <p className="text-xs text-gray-500">(Will resize if needed)</p>
           </div>
         )}
         <input
@@ -172,13 +164,13 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         />
       </label>
       {currentImagePreview && (
-         <button 
-            type="button"
-            onClick={triggerFileInput}
-            className="mt-3 w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#ff1818] hover:bg-[#e00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-[#ff1818] transition-colors"
+        <button
+          type="button"
+          onClick={triggerFileInput}
+          className="mt-3 w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#ff1818] hover:bg-[#e00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-[#ff1818] transition-colors"
         >
-            <UploadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
-            Change {label}
+          <UploadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+          Change {label}
         </button>
       )}
       {error && <p className="mt-2 text-sm text-red-600" role="alert">{error}</p>}
