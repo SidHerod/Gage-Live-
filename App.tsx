@@ -16,7 +16,7 @@ import PhotoUploadScreen from './components/PhotoUploadScreen';
 import AgeGuessingScreen from './components/AgeGuessingScreen';
 import StatisticsScreen from './components/StatisticsScreen';
 import PrivacyPolicy from './components/PrivacyPolicy';
-import PerfectHitScreen from './components/PerfectHitScreen'; // <-- Add this
+import PerfectHitScreen from './components/PerfectHitScreen';
 
 import LoadingSpinner from './components/LoadingSpinner';
 import {
@@ -137,7 +137,7 @@ const AppContent: React.FC = () => {
           )
         }
       />
-      <Route path="/perfect-hit" element={<PerfectHitScreen />} /> {/* <-- New route */}
+      <Route path="/perfect-hit" element={<PerfectHitScreen />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
@@ -149,6 +149,7 @@ const MainAppLayout: React.FC = () => {
   const { profile } = useProfile();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const profileIsComplete =
     currentUser && profile?.hasProvidedDob && profile?.photoBase64;
@@ -157,6 +158,9 @@ const MainAppLayout: React.FC = () => {
     await signOut();
     navigate('/login', { replace: true });
   };
+
+  // Check if current route is the guessing screen
+  const isGuessingScreen = location.pathname === '/game';
 
   return (
     <div className="min-h-screen bg-[#F0E1D1] text-slate-800 flex flex-col">
@@ -209,7 +213,13 @@ const MainAppLayout: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <main
+        className={
+          isGuessingScreen
+            ? "flex flex-col items-center justify-center p-4 min-h-screen py-0"
+            : "flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12"
+        }
+      >
         <AppContent />
       </main>
 
