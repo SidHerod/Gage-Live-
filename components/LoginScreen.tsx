@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GageLogoIcon, SparklesIcon } from './icons';
+import { SparklesIcon } from './icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
@@ -40,7 +40,6 @@ const LoginScreen: React.FC = () => {
         }
         const user = await signUpWithEmail(email, password, displayName);
         if (user) {
-          // Create Firestore user doc
           const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, {
             email,
@@ -71,13 +70,24 @@ const LoginScreen: React.FC = () => {
     <div className="min-h-[calc(100vh-200px)] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <GageLogoIcon className="h-12 w-auto text-[#ff1818] mx-auto mb-4" />
           <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff4545] to-[#ff1818]">
             Welcome to GAGE
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in or sign up to start guessing ages!
-          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={isAuthLoading}
+          className="w-full flex items-center justify-center px-6 py-3 rounded-lg shadow-md text-base font-medium text-white bg-[#ff1818] hover:bg-[#e00000] transition-all duration-150 ease-in-out transform hover:scale-105 disabled:opacity-70"
+        >
+          <SparklesIcon className="w-5 h-5 mr-2" />
+          {isAuthLoading ? 'Signing In...' : 'Sign In with Google'}
+        </button>
+
+        <div className="relative text-center">
+          <span className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full border-t border-gray-300"></span>
+          <span className="relative px-2 text-sm text-gray-500 bg-transparent">or</span>
         </div>
 
         <form onSubmit={handleEmailSubmit} className="bg-white p-6 rounded-xl shadow-2xl space-y-4">
@@ -118,16 +128,6 @@ const LoginScreen: React.FC = () => {
             {isAuthLoading ? 'Processing...' : isSignUp ? 'Sign Up with Email' : 'Login with Email'}
           </button>
         </form>
-
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={isAuthLoading}
-          className="w-full flex items-center justify-center px-6 py-3 rounded-lg shadow-md text-base font-medium text-white bg-[#ff1818] hover:bg-[#e00000] transition-all duration-150 ease-in-out transform hover:scale-105 disabled:opacity-70"
-        >
-          <SparklesIcon className="w-5 h-5 mr-2" />
-          {isAuthLoading ? 'Signing In...' : 'Sign In with Google'}
-        </button>
 
         <p className="text-center text-sm text-gray-600">
           {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
