@@ -31,8 +31,8 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const profileIsComplete =
-    currentUser && profile?.hasProvidedDob && profile?.photoBase64;
+  const profileHasPhoto = !!profile?.photoBase64 && profile.photoBase64.trim() !== "";
+  const profileIsComplete = currentUser && profile?.hasProvidedDob && profileHasPhoto;
 
   useEffect(() => {
     if (isAuthLoading || isProfileLoading) return;
@@ -42,7 +42,7 @@ const AppContent: React.FC = () => {
 
       if (!profile.hasProvidedDob && location.pathname !== '/account') {
         navigate('/account', { replace: true });
-      } else if (!profile.photoBase64 && location.pathname !== '/upload-photo') {
+      } else if (!profileHasPhoto && location.pathname !== '/upload-photo') {
         navigate('/upload-photo', { replace: true });
       } else if (['/', '/login'].includes(location.pathname) && profileIsComplete) {
         navigate('/game', { replace: true });
@@ -57,6 +57,7 @@ const AppContent: React.FC = () => {
     isProfileLoading,
     location.pathname,
     navigate,
+    profileHasPhoto,
     profileIsComplete,
   ]);
 
@@ -150,8 +151,8 @@ const MainAppLayout: React.FC = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
-  const profileIsComplete =
-    currentUser && profile?.hasProvidedDob && profile?.photoBase64;
+  const profileHasPhoto = !!profile?.photoBase64 && profile.photoBase64.trim() !== "";
+  const profileIsComplete = currentUser && profile?.hasProvidedDob && profileHasPhoto;
 
   const handleLogout = async () => {
     await signOut();
@@ -169,11 +170,11 @@ const MainAppLayout: React.FC = () => {
                   onClick={() => {
                     if (profileIsComplete) navigate('/statistics');
                     else if (!profile?.hasProvidedDob) navigate('/account');
-                    else if (!profile?.photoBase64) navigate('/upload-photo');
+                    else if (!profileHasPhoto) navigate('/upload-photo');
                   }}
                   className="p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-[#ff1818]"
                 >
-                  {profile?.photoBase64 ? (
+                  {profileHasPhoto ? (
                     <img
                       src={profile.photoBase64}
                       alt="Profile"
