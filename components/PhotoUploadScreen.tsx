@@ -1,72 +1,78 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProfile } from '../contexts/ProfileContext'; // Updated import
+import { useProfile } from '../contexts/ProfileContext';
 import ImageUploader from './ImageUploader';
 import { CameraIcon, SparklesIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 
 const PhotoUploadScreen: React.FC = () => {
-  const { profile, setProfileData, isLoading: isProfileLoading } = useProfile(); // Use setProfileData
+  const { profile, setProfileData, isLoading: isProfileLoading } = useProfile();
   const navigate = useNavigate();
-  
+
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null); 
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [dob, setDob] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isProfileLoading) {
       if (!profile) {
-        navigate('/login', { replace: true }); 
+        navigate('/login', { replace: true });
+      } else if (profile.photoBase64 && profile.hasProvidedDob) {
+        navigate('/game', { replace: true });
       }
-      // The App.tsx component's useEffect handles navigation if profile.photoBase64 already exists.
-      // No need for a specific 'hasCompletedPhotoUpload' check here.
     }
   }, [profile, isProfileLoading, navigate]);
 
   useEffect(() => {
-    // Initialize photoPreview with existing profile photo if available and no new preview has been set
     if (profile?.photoBase64 && !photoPreview) {
-        setPhotoPreview(profile.photoBase64);
+      setPhotoPreview(profile.photoBase64);
+    }
+    if (profile?.dob) {
+      setDob(profile.dob);
     }
   }, [profile, photoPreview]);
 
-
   const handleImageUpload = (base64: string, file: File) => {
     setPhotoPreview(base64);
-    setPhotoFile(file); // Retain file if needed for other validation/metadata, though not directly used in handleSubmit
+    setPhotoFile(file);
     setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!photoPreview) { 
+    if (!photoPreview) {
       setError('Please upload a profile picture to continue.');
       return;
     }
+    if (!dob) {
+      setError('Please enter your real age to continue.');
+      return;
+    }
     if (!profile) {
-        setError('Profile not found. Please try logging in again.');
-        return;
+      setError('Profile not found. Please try logging in again.');
+      return;
     }
 
     setError(null);
     setIsSubmitting(true);
 
     try {
-      // When user uploads, photo is not from Google.
-      await setProfileData({ photoBase64: photoPreview, photoFromGoogle: false }); 
-      // Navigation to /game will be handled by App.tsx's useEffect once the profile context updates.
+      await setProfileData({
+        photoBase64: photoPreview,
+        photoFromGoogle: false,
+        dob,
+        hasProvidedDob: true,
+      });
     } catch (err) {
-      console.error("Error saving photo:", err);
-      setError('Failed to save photo. Please try again.');
-      setIsSubmitting(false); // Ensure isSubmitting is reset on error
+      console.error("Error saving photo and age:", err);
+      setError('Failed to save your info. Please try again.');
+      setIsSubmitting(false);
     }
-    // If successful, App.tsx navigates, unmounting this. isSubmitting becomes irrelevant.
-    // If there was an error, setIsSubmitting(false) is called in the catch block.
   };
 
-  if (isProfileLoading || (!profile && !isProfileLoading)) { // Show loading if profile data is loading OR if no profile and auth isn't loading (implies profile fetch pending)
+  if (isProfileLoading || (!profile && !isProfileLoading)) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
         <LoadingSpinner size="lg" />
@@ -74,13 +80,10 @@ const PhotoUploadScreen: React.FC = () => {
       </div>
     );
   }
-  
-  if (!profile) { // Should be caught by above, but as a fallback
-      return <div className="text-center p-4">Redirecting to login...</div>;
+
+  if (!profile) {
+    return <div className="text-center p-4">Redirecting to login...</div>;
   }
-  
-  // If profile.photoBase64 is true, App.tsx should navigate away.
-  // Rendering this content implies profile.photoBase64 is false or null and user needs to upload.
 
   return (
     <div className="min-h-[calc(100vh-200px)] flex flex-col items-center justify-center p-4">
@@ -91,35 +94,48 @@ const PhotoUploadScreen: React.FC = () => {
             Hi, {profile.name}!
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            One last step: let's add your profile picture.
+            One last step: add your profile picture and age.
           </p>
         </div>
-        
-        <form 
-            onSubmit={handleSubmit} 
-            className="mt-6 space-y-6 bg-white p-6 sm:p-8 rounded-xl shadow-2xl transform hover:scale-[1.01] transition-transform duration-300"
+
+        <form
+          onSubmit={handleSubmit}
+          className="mt-6 space-y-6 bg-white p-6 sm:p-8 rounded-xl shadow-2xl transform hover:scale-[1.01] transition-transform duration-300"
         >
           <ImageUploader
             onImageUpload={handleImageUpload}
-            currentImagePreview={photoPreview} // Use state `photoPreview` which is initialized from profile.photoBase64
+            currentImagePreview={photoPreview}
             label="Profile Picture"
             aspectRatio="square"
             idSuffix="initial-photo"
           />
 
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Your Real Age
+            </label>
+            <input
+              type="date"
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#ff1818]"
+              required
+            />
+          </div>
+
           {error && <p className="text-sm text-red-600 text-center" role="alert">{error}</p>}
 
           <button
             type="submit"
-            disabled={isSubmitting || !photoPreview}
+            disabled={isSubmitting || !photoPreview || !dob}
             className="w-full flex items-center justify-center px-6 py-3 border border-transparent rounded-lg shadow-md text-base font-medium text-white bg-[#ff1818] hover:bg-[#e00000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-[#ff1818] transition-all duration-150 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
-              <LoadingSpinner size="sm" color="text-white" className="mr-2"/>
+              <LoadingSpinner size="sm" color="text-white" className="mr-2" />
             ) : (
               <SparklesIcon className="w-5 h-5 mr-2" />
             )}
-            Set Picture & Start Playing
+            Play GAGE
           </button>
         </form>
       </div>

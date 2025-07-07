@@ -31,8 +31,7 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const profileHasPhoto = !!profile?.photoBase64 && profile.photoBase64.trim() !== "";
-  const profileIsComplete = currentUser && profile?.hasProvidedDob && profileHasPhoto;
+  const profileIsComplete = currentUser && profile?.photoBase64;
 
   useEffect(() => {
     if (isAuthLoading || isProfileLoading) return;
@@ -40,9 +39,7 @@ const AppContent: React.FC = () => {
     if (currentUser) {
       if (!profile) return;
 
-      if (!profile.hasProvidedDob && location.pathname !== '/account') {
-        navigate('/account', { replace: true });
-      } else if (!profileHasPhoto && location.pathname !== '/upload-photo') {
+      if (!profile.photoBase64 && location.pathname !== '/upload-photo') {
         navigate('/upload-photo', { replace: true });
       } else if (['/', '/login'].includes(location.pathname) && profileIsComplete) {
         navigate('/game', { replace: true });
@@ -57,7 +54,6 @@ const AppContent: React.FC = () => {
     isProfileLoading,
     location.pathname,
     navigate,
-    profileHasPhoto,
     profileIsComplete,
   ]);
 
@@ -81,13 +77,7 @@ const AppContent: React.FC = () => {
             <LoginScreen />
           ) : (
             <Navigate
-              to={
-                profileIsComplete
-                  ? '/game'
-                  : !profile?.hasProvidedDob
-                  ? '/account'
-                  : '/upload-photo'
-              }
+              to={profileIsComplete ? '/game' : '/upload-photo'}
               replace
             />
           )
@@ -102,11 +92,7 @@ const AppContent: React.FC = () => {
       <Route
         path="/upload-photo"
         element={
-          currentUser && profile?.hasProvidedDob ? (
-            <PhotoUploadScreen />
-          ) : (
-            <Navigate to={currentUser ? '/account' : '/login'} replace />
-          )
+          currentUser ? <PhotoUploadScreen /> : <Navigate to="/login" replace />
         }
       />
       <Route
@@ -116,13 +102,7 @@ const AppContent: React.FC = () => {
             <AgeGuessingScreen />
           ) : (
             <Navigate
-              to={
-                currentUser
-                  ? !profile?.hasProvidedDob
-                    ? '/account'
-                    : '/upload-photo'
-                  : '/login'
-              }
+              to={currentUser ? '/upload-photo' : '/login'}
               replace
             />
           )
@@ -151,8 +131,7 @@ const MainAppLayout: React.FC = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
-  const profileHasPhoto = !!profile?.photoBase64 && profile.photoBase64.trim() !== "";
-  const profileIsComplete = currentUser && profile?.hasProvidedDob && profileHasPhoto;
+  const profileIsComplete = currentUser && profile?.photoBase64;
 
   const handleLogout = async () => {
     await signOut();
@@ -169,12 +148,11 @@ const MainAppLayout: React.FC = () => {
                 <button
                   onClick={() => {
                     if (profileIsComplete) navigate('/statistics');
-                    else if (!profile?.hasProvidedDob) navigate('/account');
-                    else if (!profileHasPhoto) navigate('/upload-photo');
+                    else navigate('/upload-photo');
                   }}
                   className="p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-[#ff1818]"
                 >
-                  {profileHasPhoto ? (
+                  {profile?.photoBase64 ? (
                     <img
                       src={profile.photoBase64}
                       alt="Profile"

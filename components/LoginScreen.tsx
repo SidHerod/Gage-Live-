@@ -52,7 +52,7 @@ const LoginScreen: React.FC = () => {
             guessHistory: [],
             createdAt: new Date(),
           });
-          navigate('/account');
+          // ✅ Removed: navigate('/account');
         }
       } else {
         const user = await loginWithEmail(email, password);
