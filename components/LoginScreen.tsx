@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { SparklesIcon } from './icons';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -13,15 +12,12 @@ const LoginScreen: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
 
   const { signInWithGoogle, signUpWithEmail, loginWithEmail, isLoading: isAuthLoading } = useAuth();
-  const navigate = useNavigate();
 
   const handleGoogleSignIn = async () => {
     setError(null);
     try {
-      const user = await signInWithGoogle();
-      if (user) {
-        navigate('/account');
-      }
+      await signInWithGoogle();
+      // App.tsx will handle the redirect after auth
     } catch (err) {
       setError('Failed to sign in with Google. Please try again.');
       console.error("Google Sign-In error:", err);
@@ -52,13 +48,11 @@ const LoginScreen: React.FC = () => {
             guessHistory: [],
             createdAt: new Date(),
           });
-          // ✅ Removed: navigate('/account');
+          // ✅ No manual navigation; App.tsx will handle redirect
         }
       } else {
-        const user = await loginWithEmail(email, password);
-        if (user) {
-          navigate('/account');
-        }
+        await loginWithEmail(email, password);
+        // ✅ No manual navigation; App.tsx will handle redirect
       }
     } catch (err) {
       setError('Email authentication failed. Please try again.');

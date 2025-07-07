@@ -27,11 +27,23 @@ import {
 
 const AppContent: React.FC = () => {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
-  const { profile, isLoading: isProfileLoading } = useProfile();
+  const { profile, isLoading: isProfileLoading, setProfileData } = useProfile();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const profileIsComplete = currentUser && profile?.photoBase64;
+  // Determine profile completeness
+  const hasDob = !!profile?.dob;
+  const hasPhoto = !!profile?.photoBase64;
+  const profileIsComplete = currentUser && hasDob && hasPhoto;
+
+  // Patch old profiles automatically: if dob exists but hasProvidedDob flag is missing, set it
+  useEffect(() => {
+    if (profile && hasDob && !profile.hasProvidedDob) {
+      setProfileData({ hasProvidedDob: true }).catch((err) =>
+        console.error("Error updating hasProvidedDob:", err)
+      );
+    }
+  }, [profile, hasDob, setProfileData]);
 
   useEffect(() => {
     if (isAuthLoading || isProfileLoading) return;
@@ -39,7 +51,9 @@ const AppContent: React.FC = () => {
     if (currentUser) {
       if (!profile) return;
 
-      if (!profile.photoBase64 && location.pathname !== '/upload-photo') {
+      if (!hasDob && location.pathname !== '/account' && location.pathname !== '/upload-photo') {
+        navigate('/upload-photo', { replace: true });
+      } else if (!hasPhoto && location.pathname !== '/upload-photo') {
         navigate('/upload-photo', { replace: true });
       } else if (['/', '/login'].includes(location.pathname) && profileIsComplete) {
         navigate('/game', { replace: true });
@@ -55,6 +69,8 @@ const AppContent: React.FC = () => {
     location.pathname,
     navigate,
     profileIsComplete,
+    hasDob,
+    hasPhoto,
   ]);
 
   if (isAuthLoading || (currentUser && isProfileLoading)) {
@@ -77,7 +93,13 @@ const AppContent: React.FC = () => {
             <LoginScreen />
           ) : (
             <Navigate
-              to={profileIsComplete ? '/game' : '/upload-photo'}
+              to={
+                profileIsComplete
+                  ? '/game'
+                  : !hasDob
+                  ? '/upload-photo'
+                  : '/upload-photo'
+              }
               replace
             />
           )
@@ -101,10 +123,7 @@ const AppContent: React.FC = () => {
           profileIsComplete ? (
             <AgeGuessingScreen />
           ) : (
-            <Navigate
-              to={currentUser ? '/upload-photo' : '/login'}
-              replace
-            />
+            <Navigate to="/upload-photo" replace />
           )
         }
       />
@@ -131,7 +150,9 @@ const MainAppLayout: React.FC = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
-  const profileIsComplete = currentUser && profile?.photoBase64;
+  const hasDob = !!profile?.dob;
+  const hasPhoto = !!profile?.photoBase64;
+  const profileIsComplete = currentUser && hasDob && hasPhoto;
 
   const handleLogout = async () => {
     await signOut();
