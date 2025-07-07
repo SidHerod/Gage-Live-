@@ -118,7 +118,9 @@ const StatisticsScreen: React.FC = () => {
                   className="w-32 sm:w-40 h-48 sm:h-56 object-cover rounded-xl border shadow-xl"
                 />
                 <div className="flex-grow text-center sm:text-left mt-4 sm:mt-0 sm:ml-4">
-                  <p className="font-semibold text-gray-800 text-lg">{record.guessedUserName || 'A User'}</p>
+                  <p className="font-semibold text-gray-800 text-lg">
+                    {record.guessedUserName ? record.guessedUserName.split(' ')[0] : 'A User'}
+                  </p>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-sm mt-1">
                     <span className="text-gray-600">Actual Age:</span> <span className="font-bold">{record.theirActualAge}</span>
                     <span className="text-gray-600">Your Guess:</span>
