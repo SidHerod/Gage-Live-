@@ -10,6 +10,7 @@
     "start": "vite"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.6",
     "@google/genai": "^1.0.1",
     "@tailwindcss/postcss": "^4.1.8",
     "@vitejs/plugin-react": "^4.5.0",

@@ -2,8 +2,8 @@ import { db } from './firebase';
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../contexts/ProfileContext';
-import type { GuessRecord } from '../types'; 
-import { UserIcon, CheckCircleIcon, XCircleIcon, LightBulbIcon, SparklesIcon, CogIcon } from './icons'; 
+import type { GuessRecord } from '../types';
+import { UserIcon, CheckCircleIcon, XCircleIcon, LightBulbIcon, SparklesIcon, CogIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 
 const StatCard: React.FC<{ title: string; value: string | number; children?: React.ReactNode; icon?: React.ReactNode }> = ({ title, value, children, icon }) => (
@@ -57,12 +57,6 @@ const StatisticsScreen: React.FC = () => {
     );
   }
 
-  // ✅ Debug: Check if GAGE data is loaded correctly
-  console.log('📊 GAGE Stats', {
-    communityAverageGuess: profile.communityAverageGuess,
-    numberOfCommunityGuesses: profile.numberOfCommunityGuesses,
-  });
-
   const calculateGagerScore = (): string => {
     if (profile.myNumberOfGuessesMade === 0) return 'N/A';
     const maxPoints = profile.myNumberOfGuessesMade * 10;
@@ -70,7 +64,6 @@ const StatisticsScreen: React.FC = () => {
     return `${Math.round(accuracy)}%`;
   };
 
-  // ✅ Fix logic to handle GAGE properly
   const yourGage =
     typeof profile.communityAverageGuess === 'number' &&
     profile.numberOfCommunityGuesses > 0
@@ -83,9 +76,9 @@ const StatisticsScreen: React.FC = () => {
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex flex-col items-center space-y-4 pt-4 sm:pt-0">
         {profile.photoBase64 ? (
-          <img 
-            src={profile.photoBase64} 
-            alt="Your profile" 
+          <img
+            src={profile.photoBase64}
+            alt="Your profile"
             className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover shadow-xl border-4 border-white transform hover:scale-105 transition-transform"
           />
         ) : (
@@ -115,20 +108,20 @@ const StatisticsScreen: React.FC = () => {
         {profile.lastThreeGuesses && profile.lastThreeGuesses.length > 0 ? (
           <div className="space-y-4">
             {profile.lastThreeGuesses.map((record, index) => (
-              <div 
-                key={record.guessedUserId + index + record.yourGuess} 
+              <div
+                key={record.guessedUserId + index + record.yourGuess}
                 className="flex flex-col sm:flex-row items-center bg-gray-50 p-4 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow duration-300"
               >
-                <img 
-  src={profile.photoBase64} 
-  alt="Your profile" 
-  className="w-32 sm:w-40 h-48 sm:h-56 object-cover rounded-xl border shadow-xl"
-/>
-                <div className="flex-grow text-center sm:text-left">
+                <img
+                  src={record.guessedUserPhotoBase64 || '/placeholder.png'}
+                  alt={record.guessedUserName || 'Guessed User'}
+                  className="w-32 sm:w-40 h-48 sm:h-56 object-cover rounded-xl border shadow-xl"
+                />
+                <div className="flex-grow text-center sm:text-left mt-4 sm:mt-0 sm:ml-4">
                   <p className="font-semibold text-gray-800 text-lg">{record.guessedUserName || 'A User'}</p>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-sm mt-1">
                     <span className="text-gray-600">Actual Age:</span> <span className="font-bold">{record.theirActualAge}</span>
-                    <span className="text-gray-600">Your Guess:</span> 
+                    <span className="text-gray-600">Your Guess:</span>
                     <span className="font-bold flex items-center justify-center sm:justify-start">
                       {record.yourGuess} {getGuessAccuracyVisual(record)}
                     </span>
@@ -162,7 +155,7 @@ const StatisticsScreen: React.FC = () => {
           onClick={() => navigate('/account')}
           className="w-full sm:w-auto flex items-center justify-center px-8 py-3 border border-gray-300 rounded-lg shadow-md text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-[#ff1818] transition-all duration-150 ease-in-out transform hover:scale-105"
         >
-          <CogIcon className="w-5 h-5 mr-2" /> 
+          <CogIcon className="w-5 h-5 mr-2" />
           Manage Account
         </button>
       </div>

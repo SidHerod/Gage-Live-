@@ -153,7 +153,7 @@ const AgeGuessingScreen: React.FC = () => {
           />
         </div>
       )}
-      <p className="text-lg mb-1">Your Guess: {currentGuessValue}</p>
+      <p className="text-3xl mt-6 mb-4 font-bold">{currentGuessValue}</p>
       <input
         type="range"
         min="16"
