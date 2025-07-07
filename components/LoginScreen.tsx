@@ -52,7 +52,7 @@ const LoginScreen: React.FC = () => {
             guessHistory: [],
             createdAt: new Date(),
           });
-          window.location.reload(); // ✅ Fixed: force reload after signup
+          navigate('/account');
         }
       } else {
         const user = await loginWithEmail(email, password);
