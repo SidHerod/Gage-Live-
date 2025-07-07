@@ -149,7 +149,6 @@ const MainAppLayout: React.FC = () => {
   const { profile } = useProfile();
   const { signOut } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const profileIsComplete =
     currentUser && profile?.hasProvidedDob && profile?.photoBase64;
@@ -158,9 +157,6 @@ const MainAppLayout: React.FC = () => {
     await signOut();
     navigate('/login', { replace: true });
   };
-
-  // Check if current route is the guessing screen
-  const isGuessingScreen = location.pathname === '/game';
 
   return (
     <div className="min-h-screen bg-[#F0E1D1] text-slate-800 flex flex-col">
@@ -213,28 +209,22 @@ const MainAppLayout: React.FC = () => {
         </div>
       </header>
 
-      <main
-        className={
-          isGuessingScreen
-            ? "flex flex-col items-center justify-center p-4 min-h-screen py-0"
-            : "flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12"
-        }
-      >
+      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <AppContent />
       </main>
 
       <footer className="bg-white/50 py-6 text-center">
         <p className="text-sm text-gray-600">
-          &copy; {new Date().getFullYear()} Gage. For entertainment purposes only.{' '}
-          <a
-            href="/privacy-policy.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-800 underline"
-          >
-            Privacy Policy
-          </a>
+          &copy; {new Date().getFullYear()} Gage. For entertainment purposes only.
         </p>
+        <a
+          href="/privacy-policy.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-[#ff1818] hover:text-[#e00000] underline mt-1 block"
+        >
+          Privacy Policy
+        </a>
       </footer>
     </div>
   );
