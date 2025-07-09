@@ -13,7 +13,8 @@ const AgeGuessingScreen: React.FC = () => {
   const [currentUserToGuess, setCurrentUserToGuess] = useState<OtherUser | null>(null);
   const [shuffledProfiles, setShuffledProfiles] = useState<OtherUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [guess, setGuess] = useState(16); // ✅ Start at 16
+  const [guess, setGuess] = useState(16);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     if (!isProfileLoading && !profile) {
@@ -39,7 +40,8 @@ const AgeGuessingScreen: React.FC = () => {
   useEffect(() => {
     if (shuffledProfiles.length > 0) {
       setCurrentUserToGuess(shuffledProfiles[currentIndex % shuffledProfiles.length]);
-      setGuess(16); // ✅ Reset to 16 on new user
+      setGuess(16);
+      setIsLoaded(false);
     }
   }, [shuffledProfiles, currentIndex]);
 
@@ -82,25 +84,27 @@ const AgeGuessingScreen: React.FC = () => {
   };
 
   if (isProfileLoading || !profile) return <LoadingSpinner size="lg" />;
-  if (!currentUserToGuess) {
-    return <div className="text-center p-8">No profiles to guess right now. Come back later!</div>;
-  }
 
   const fillPercent = ((guess - 16) / (100 - 16)) * 100;
 
   return (
     <main className="flex flex-col items-center justify-center p-4">
-      <div className="relative w-[300px] h-[400px] overflow-hidden rounded-2xl shadow-lg mb-6 mx-auto">
+      <div
+        className={`relative w-[300px] h-[400px] overflow-hidden rounded-2xl shadow-lg mb-6 mx-auto transition-opacity duration-700 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
         <img
-          src={currentUserToGuess.photoBase64}
+          src={currentUserToGuess?.photoBase64}
           alt="User to guess"
           className="w-full h-full object-cover"
+          onLoad={() => setIsLoaded(true)}
         />
         <div
           key={guess}
           className="absolute top-4 right-4 flex items-center justify-center w-16 h-16 rounded-full"
           style={{
-            background: 'rgba(255, 255, 255, 0.75)', // ✅ 75% transparency
+            background: 'rgba(255, 255, 255, 0.75)',
             border: '4px solid #ff1818',
             color: '#ff1818',
             fontWeight: 'bold',

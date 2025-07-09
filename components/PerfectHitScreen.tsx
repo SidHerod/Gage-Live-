@@ -7,14 +7,13 @@ const PerfectHitScreen: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       navigate('/game', { replace: true });
-    }, 2000); // show for 2 seconds
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [navigate]);
 
   return (
     <div className="flex items-center justify-center h-screen bg-[#F0E1D1]">
-      {/* ✅ Correct SVG file name and path */}
       <img 
         src="/gaged-hit.svg" 
         alt="Perfect Hit" 
