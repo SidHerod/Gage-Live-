@@ -1,34 +1,19 @@
-import { db } from '../firebase';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../contexts/ProfileContext';
 import { getAllGuessableProfiles } from '../hooks/firestoreHelpers';
-import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
-import type { OtherUser } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-
-interface AnimatedFeedback {
-  text: string;
-  colorClass: string;
-  key: number;
-}
-
-type GagedAnimationStep = 'idle' | 'showingFeedback';
+import type { OtherUser } from '../types';
+import { db } from '../firebase';
+import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 
 const AgeGuessingScreen: React.FC = () => {
   const navigate = useNavigate();
   const { profile, updateUserGuessingStats, isLoading: isProfileLoading } = useProfile();
-
   const [currentUserToGuess, setCurrentUserToGuess] = useState<OtherUser | null>(null);
-  const [currentGuessValue, setCurrentGuessValue] = useState<number>(16);
   const [shuffledProfiles, setShuffledProfiles] = useState<OtherUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  const [animatedFeedback, setAnimatedFeedback] = useState<AnimatedFeedback | null>(null);
-  const [gagedAnimationStep, setGagedAnimationStep] = useState<GagedAnimationStep>('idle');
-  const [noProfilesMessage, setNoProfilesMessage] = useState<string | null>(null);
-
-  const submissionLockRef = useRef(false);
+  const [guess, setGuess] = useState(16); // ✅ Start at 16
 
   useEffect(() => {
     if (!isProfileLoading && !profile) {
@@ -41,35 +26,27 @@ const AgeGuessingScreen: React.FC = () => {
       if (profile?.id) {
         const availableProfiles = await getAllGuessableProfiles(profile.id);
         if (availableProfiles.length === 0) {
-          setNoProfilesMessage("Come back soon to gauge more ages");
           setShuffledProfiles([]);
         } else {
-          setNoProfilesMessage(null);
           setShuffledProfiles([...availableProfiles].sort(() => Math.random() - 0.5));
         }
         setCurrentIndex(0);
-        setGagedAnimationStep('idle');
       }
     };
     fetchProfiles();
   }, [profile?.id, isProfileLoading]);
 
   useEffect(() => {
-    if (gagedAnimationStep === 'idle' && shuffledProfiles.length > 0 && profile) {
-      const newIndex = currentIndex % shuffledProfiles.length;
-      setCurrentUserToGuess(shuffledProfiles[newIndex]);
-      setCurrentGuessValue(16);
-    } else if (gagedAnimationStep === 'idle' && shuffledProfiles.length === 0 && profile && !isProfileLoading) {
-      setCurrentUserToGuess(null);
+    if (shuffledProfiles.length > 0) {
+      setCurrentUserToGuess(shuffledProfiles[currentIndex % shuffledProfiles.length]);
+      setGuess(16); // ✅ Reset to 16 on new user
     }
-  }, [shuffledProfiles, currentIndex, profile, gagedAnimationStep, isProfileLoading]);
+  }, [shuffledProfiles, currentIndex]);
 
-  const submitGuessAndLoadNext = useCallback(async () => {
-    if (submissionLockRef.current || !currentUserToGuess || !profile || gagedAnimationStep !== 'idle') return;
+  const confirmGuess = async () => {
+    if (guess < 16 || guess > 100) return;
 
-    submissionLockRef.current = true;
-    const guess = currentGuessValue;
-    const actualAge = currentUserToGuess.actualAge;
+    const actualAge = currentUserToGuess?.actualAge || 0;
     const diff = Math.abs(guess - actualAge);
     let pointsEarned = 0;
 
@@ -80,100 +57,83 @@ const AgeGuessingScreen: React.FC = () => {
     else if (diff === 4) pointsEarned = 3;
     else if (diff === 5) pointsEarned = 2;
     else if (diff >= 6 && diff <= 7) pointsEarned = 1;
-    else pointsEarned = 0;
 
-    updateUserGuessingStats(pointsEarned, currentUserToGuess, guess);
+    if (currentUserToGuess && profile) {
+      updateUserGuessingStats(pointsEarned, currentUserToGuess, guess);
 
-    try {
-      const userDocRef = doc(db, 'users', currentUserToGuess.id);
-      await updateDoc(userDocRef, {
-        communityAverageGuessTotal: increment(guess),
-        numberOfCommunityGuesses: increment(1),
-        guessHistory: arrayUnion({ guesserId: profile.id, guessValue: guess }),
-      });
-    } catch (error) {
-      console.error("🔥 Firestore update FAILED:", error);
+      try {
+        const userDocRef = doc(db, 'users', currentUserToGuess.id);
+        await updateDoc(userDocRef, {
+          communityAverageGuessTotal: increment(guess),
+          numberOfCommunityGuesses: increment(1),
+          guessHistory: arrayUnion({ guesserId: profile.id, guessValue: guess }),
+        });
+      } catch (error) {
+        console.error("Firestore update FAILED:", error);
+      }
+
+      if (diff === 0) {
+        navigate('/perfect-hit');
+        return;
+      }
+
+      setCurrentIndex((prev) => prev + 1);
     }
-
-    if (diff === 0) {
-      navigate('/perfect-hit');
-      return;
-    }
-
-    if (diff === 1 || diff === 2) {
-      setAnimatedFeedback({ text: diff.toString(), colorClass: 'text-[#ff1818]', key: Date.now() });
-      setGagedAnimationStep('showingFeedback');
-
-      setTimeout(() => {
-        setAnimatedFeedback(null);
-        setGagedAnimationStep('idle');
-        setCurrentIndex(prev => prev + 1);
-        submissionLockRef.current = false;
-      }, 1500);
-    } else {
-      setCurrentIndex(prev => prev + 1);
-      setGagedAnimationStep('idle');
-      submissionLockRef.current = false;
-    }
-  }, [currentUserToGuess, profile, currentGuessValue, updateUserGuessingStats, gagedAnimationStep, navigate]);
-
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrentGuessValue(parseInt(e.target.value, 10));
-  };
-
-  const handleSliderRelease = () => {
-    submitGuessAndLoadNext();
   };
 
   if (isProfileLoading || !profile) return <LoadingSpinner size="lg" />;
-
-  if (noProfilesMessage && gagedAnimationStep === 'idle') {
-    return (
-      <div className="text-center p-8 bg-white rounded-xl shadow-xl max-w-md mx-auto">
-        <h3 className="text-2xl font-semibold text-[#ff1818] mb-4">No Gages Available</h3>
-        <p className="text-slate-600 mb-6">{noProfilesMessage}</p>
-        <button
-          onClick={() => navigate('/statistics')}
-          className="px-6 py-3 bg-[#ff1818] text-white font-semibold rounded-lg shadow-md hover:bg-[#e00000]"
-        >
-          Go to Your Profile & Stats
-        </button>
-      </div>
-    );
+  if (!currentUserToGuess) {
+    return <div className="text-center p-8">No profiles to guess right now. Come back later!</div>;
   }
 
+  const fillPercent = ((guess - 16) / (100 - 16)) * 100;
+
   return (
-    <main className="flex flex-col items-center justify-center p-4 min-h-screen py-0 !py-0">
-      {currentUserToGuess && (
-        <div className="w-[345px] h-[460px] mx-auto overflow-hidden rounded-2xl shadow-lg mb-0">
-          <img
-            src={currentUserToGuess.photoBase64}
-            alt="User to guess"
-            className="w-full h-full object-cover"
-          />
+    <main className="flex flex-col items-center justify-center p-4">
+      <div className="relative w-[300px] h-[400px] overflow-hidden rounded-2xl shadow-lg mb-6 mx-auto">
+        <img
+          src={currentUserToGuess.photoBase64}
+          alt="User to guess"
+          className="w-full h-full object-cover"
+        />
+        <div
+          key={guess}
+          className="absolute top-4 right-4 flex items-center justify-center w-16 h-16 rounded-full"
+          style={{
+            background: 'rgba(255, 255, 255, 0.75)', // ✅ 75% transparency
+            border: '4px solid #ff1818',
+            color: '#ff1818',
+            fontWeight: 'bold',
+            fontSize: '1.5rem',
+            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
+            transition: 'all 0.3s ease-in-out',
+          }}
+        >
+          {guess}
         </div>
-      )}
-      <p className="text-3xl mt-6 mb-4 font-bold">{currentGuessValue}</p>
+      </div>
+
       <input
         type="range"
         min="16"
         max="100"
-        value={currentGuessValue}
-        onChange={handleSliderChange}
-        onPointerUp={handleSliderRelease}
-        className="w-64 h-2 bg-[#ff1818] rounded-lg appearance-none cursor-pointer
-                   [&::-webkit-slider-thumb]:appearance-none 
-                   [&::-webkit-slider-thumb]:h-6 
-                   [&::-webkit-slider-thumb]:w-6 
-                   [&::-webkit-slider-thumb]:rounded-full 
-                   [&::-webkit-slider-thumb]:bg-[#ff1818]
-                   [&::-moz-range-thumb]:bg-[#ff1818]"
+        value={guess}
+        onChange={(e) => setGuess(Number(e.target.value))}
+        className="w-full max-w-xs rounded-lg appearance-none"
+        style={{
+          background: `linear-gradient(to right, #ff1818 ${fillPercent}%, #ff181880 ${fillPercent}%)`,
+          borderRadius: '4px',
+          height: '8px',
+          outline: 'none',
+        }}
       />
-      {animatedFeedback && (
-        <p className={`mt-4 text-5xl font-extrabold ${animatedFeedback.colorClass}`}>
-          {animatedFeedback.text}
-        </p>
-      )}
+
+      <button
+        onClick={confirmGuess}
+        className="mt-6 px-8 py-3 bg-[#ff1818] text-white font-bold rounded-lg shadow-md hover:bg-[#e00000] transition-transform transform hover:scale-105 active:scale-95"
+      >
+        GAGE
+      </button>
     </main>
   );
 };
